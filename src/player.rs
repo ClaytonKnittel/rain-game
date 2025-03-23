@@ -15,6 +15,8 @@ use bevy::{
   transform::components::Transform,
 };
 
+use crate::win_info::WinInfo;
+
 /// Component that identifies the player.
 #[derive(Component)]
 struct Player;
@@ -28,9 +30,11 @@ struct PlayerBundle {
 }
 
 impl PlayerBundle {
+  const RADIUS: f32 = 50.0;
+
   fn new(meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> Self {
     Self {
-      mesh: Mesh2d(meshes.add(Circle::new(50.0))),
+      mesh: Mesh2d(meshes.add(Circle::new(Self::RADIUS))),
       material: MeshMaterial2d(materials.add(Color::hsl(0.0, 0.95, 0.7))),
       transform: Transform::from_xyz(0.0, 0.0, 0.0),
       player: Player,
@@ -50,14 +54,29 @@ impl PlayerPlugin {
   }
 
   fn move_player(
+    win_info: Res<WinInfo>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut query: Query<&mut Transform, With<Player>>,
   ) {
-    if keyboard_input.pressed(KeyCode::Space) {
-      for mut transform in &mut query {
-        transform.translation.x += 1.0;
+    for mut transform in &mut query {
+      if keyboard_input.pressed(KeyCode::Space) {
+        transform.translation.x += 10.0;
       }
+      Self::snap_in_bounds(&win_info, &mut transform);
     }
+  }
+
+  fn snap_in_bounds(win_info: &WinInfo, transform: &mut Transform) {
+    transform.translation.x = transform
+      .translation
+      .x
+      .min(win_info.width / 2. - PlayerBundle::RADIUS)
+      .max(-(win_info.width / 2. - PlayerBundle::RADIUS));
+    transform.translation.y = transform
+      .translation
+      .y
+      .min(win_info.height / 2. - PlayerBundle::RADIUS)
+      .max(-(win_info.height / 2. - PlayerBundle::RADIUS));
   }
 }
 
