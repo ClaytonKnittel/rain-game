@@ -59,7 +59,16 @@ impl PlayerPlugin {
     mut query: Query<&mut Transform, With<Player>>,
   ) {
     for mut transform in &mut query {
-      if keyboard_input.pressed(KeyCode::Space) {
+      if keyboard_input.pressed(KeyCode::KeyW) {
+        transform.translation.y += 10.0;
+      }
+      if keyboard_input.pressed(KeyCode::KeyA) {
+        transform.translation.x -= 10.0;
+      }
+      if keyboard_input.pressed(KeyCode::KeyS) {
+        transform.translation.y -= 10.0;
+      }
+      if keyboard_input.pressed(KeyCode::KeyD) {
         transform.translation.x += 10.0;
       }
       Self::snap_in_bounds(&win_info, &mut transform);

@@ -1,10 +1,11 @@
 use bevy::{
-  app::{Plugin, Startup, Update},
+  app::{AppExit, Plugin, Startup, Update},
   core_pipeline::core_2d::Camera2d,
   ecs::{
-    event::EventReader,
-    system::{Commands, ResMut},
+    event::{EventReader, EventWriter},
+    system::{Commands, Res, ResMut},
   },
+  input::{keyboard::KeyCode, ButtonInput},
   window::WindowResized,
 };
 
@@ -16,6 +17,15 @@ impl WorldInitPlugin {
   fn world_init(mut commands: Commands) {
     commands.spawn(Camera2d);
     commands.init_resource::<WinInfo>();
+  }
+
+  fn app_exit_listener(
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut app_exit: EventWriter<AppExit>,
+  ) {
+    if keyboard_input.pressed(KeyCode::Escape) {
+      app_exit.send(AppExit::Success);
+    }
   }
 
   fn resize_listener(mut resize_events: EventReader<WindowResized>, mut win_info: ResMut<WinInfo>) {
@@ -31,6 +41,6 @@ impl Plugin for WorldInitPlugin {
   fn build(&self, app: &mut bevy::app::App) {
     app
       .add_systems(Startup, Self::world_init)
-      .add_systems(Update, Self::resize_listener);
+      .add_systems(Update, (Self::app_exit_listener, Self::resize_listener));
   }
 }
