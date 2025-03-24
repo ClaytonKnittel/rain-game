@@ -5,6 +5,7 @@ use bevy::{
     bundle::Bundle,
     component::Component,
     query::With,
+    schedule::IntoSystemConfigs,
     system::{Commands, Query, Res},
   },
   input::{keyboard::KeyCode, ButtonInput},
@@ -13,12 +14,14 @@ use bevy::{
 };
 
 use crate::{
+  movable::{MoveComponent, MovePlugin},
   screen_object::{ScreenObjectBundle, SpawnScreenObjectExt},
   win_info::WinInfo,
 };
 
 /// Component that identifies the player.
 #[derive(Component)]
+#[require(MoveComponent)]
 struct Player;
 
 #[derive(Bundle)]
@@ -43,39 +46,45 @@ impl PlayerBundle {
 pub struct PlayerPlugin;
 
 impl PlayerPlugin {
+  const SPEED: f32 = 200.0;
+
   fn move_player(
-    win_info: Res<WinInfo>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut query: Query<&mut Transform, With<Player>>,
+    mut query: Query<&mut MoveComponent, With<Player>>,
   ) {
-    for mut transform in &mut query {
-      if keyboard_input.pressed(KeyCode::KeyW) {
-        transform.translation.y += 10.0;
+    for mut move_component in &mut query {
+      match (
+        keyboard_input.pressed(KeyCode::KeyW),
+        keyboard_input.pressed(KeyCode::KeyS),
+      ) {
+        (true, false) => move_component.delta.y = Self::SPEED,
+        (false, true) => move_component.delta.y = -Self::SPEED,
+        _ => move_component.delta.y = 0.0,
       }
-      if keyboard_input.pressed(KeyCode::KeyA) {
-        transform.translation.x -= 10.0;
+      match (
+        keyboard_input.pressed(KeyCode::KeyD),
+        keyboard_input.pressed(KeyCode::KeyA),
+      ) {
+        (true, false) => move_component.delta.x = Self::SPEED,
+        (false, true) => move_component.delta.x = -Self::SPEED,
+        _ => move_component.delta.x = 0.0,
       }
-      if keyboard_input.pressed(KeyCode::KeyS) {
-        transform.translation.y -= 10.0;
-      }
-      if keyboard_input.pressed(KeyCode::KeyD) {
-        transform.translation.x += 10.0;
-      }
-      Self::snap_in_bounds(&win_info, &mut transform);
     }
   }
 
-  fn snap_in_bounds(win_info: &WinInfo, transform: &mut Transform) {
-    transform.translation.x = transform
-      .translation
-      .x
-      .min(win_info.width / 2. - PlayerBundle::RADIUS)
-      .max(-(win_info.width / 2. - PlayerBundle::RADIUS));
-    transform.translation.y = transform
-      .translation
-      .y
-      .min(win_info.height / 2. - PlayerBundle::RADIUS)
-      .max(-(win_info.height / 2. - PlayerBundle::RADIUS));
+  fn snap_in_bounds(win_info: Res<WinInfo>, mut query: Query<&mut Transform, With<Player>>) {
+    for mut transform in &mut query {
+      transform.translation.x = transform
+        .translation
+        .x
+        .min(win_info.width / 2. - PlayerBundle::RADIUS)
+        .max(-(win_info.width / 2. - PlayerBundle::RADIUS));
+      transform.translation.y = transform
+        .translation
+        .y
+        .min(win_info.height / 2. - PlayerBundle::RADIUS)
+        .max(-(win_info.height / 2. - PlayerBundle::RADIUS));
+    }
   }
 }
 
@@ -83,6 +92,10 @@ impl Plugin for PlayerPlugin {
   fn build(&self, app: &mut App) {
     app
       .add_systems(Startup, PlayerBundle::spawn_player)
-      .add_systems(FixedUpdate, Self::move_player);
+      .add_systems(
+        FixedUpdate,
+        Self::move_player.before(MovePlugin::apply_moves),
+      )
+      .add_systems(FixedUpdate, Self::snap_in_bounds);
   }
 }
