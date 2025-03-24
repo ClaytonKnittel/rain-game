@@ -4,8 +4,7 @@ use bevy::{
   ecs::{
     bundle::Bundle,
     component::Component,
-    entity::Entity,
-    query::With,
+    query::{With, Without},
     schedule::IntoSystemConfigs,
     system::{Commands, Query, Res, Single},
   },
@@ -90,15 +89,24 @@ impl PlayerPlugin {
   }
 
   fn handle_rain_collisions(
-    mut commands: Commands,
-    player: Single<&Transform, With<Player>>,
-    rain_query: Query<(Entity, &Transform), With<Rain>>,
+    player: Single<(&Transform, &MoveComponent), With<Player>>,
+    mut rain_query: Query<(&Transform, &mut MoveComponent), (With<Rain>, Without<Player>)>,
   ) {
-    let player_pos = player.translation.xy();
-    for (rain_entity, rain_trans) in &rain_query {
-      let dist2 = (rain_trans.translation.xy() - player_pos).length_squared();
+    let (player_pos, player_vel) = player.into_inner();
+    let player_pos = player_pos.translation.xy();
+    for (rain_trans, mut rain_vel) in &mut rain_query {
+      let diff = rain_trans.translation.xy() - player_pos;
+      let dist2 = diff.length_squared();
       if dist2 < (PlayerBundle::RADIUS + RainBundle::RADIUS).squared() {
-        commands.entity(rain_entity).despawn();
+        let relative_vel = rain_vel.delta - player_vel.delta;
+
+        let diff = diff.normalize();
+        let dot = diff.dot(relative_vel);
+        if dot < 0. {
+          let orthogonal_vel = diff * dot;
+          let impulse = -2. * orthogonal_vel;
+          rain_vel.delta += impulse;
+        }
       }
     }
   }
@@ -113,6 +121,9 @@ impl Plugin for PlayerPlugin {
         Self::move_player.before(MovePlugin::apply_moves),
       )
       .add_systems(FixedUpdate, Self::snap_in_bounds)
-      .add_systems(FixedUpdate, Self::handle_rain_collisions);
+      .add_systems(
+        FixedUpdate,
+        Self::handle_rain_collisions.before(MovePlugin::apply_moves),
+      );
   }
 }
