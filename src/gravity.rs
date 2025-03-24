@@ -31,7 +31,7 @@ impl Plugin for GravityPlugin {
   fn build(&self, app: &mut App) {
     app.add_systems(
       FixedUpdate,
-      Self::apply_gravity.after(MovePlugin::apply_moves),
+      Self::apply_gravity.before(MovePlugin::apply_moves),
     );
   }
 }
