@@ -4,17 +4,19 @@ use bevy::{
   ecs::{
     bundle::Bundle,
     component::Component,
+    entity::Entity,
     query::With,
     schedule::IntoSystemConfigs,
-    system::{Commands, Query, Res},
+    system::{Commands, Query, Res, Single},
   },
   input::{keyboard::KeyCode, ButtonInput},
-  math::primitives::Circle,
+  math::{primitives::Circle, FloatPow, Vec3Swizzles},
   transform::components::Transform,
 };
 
 use crate::{
   movable::{MoveComponent, MovePlugin},
+  rain::{Rain, RainBundle},
   screen_object::{ScreenObjectBundle, SpawnScreenObjectExt},
   win_info::WinInfo,
 };
@@ -86,6 +88,20 @@ impl PlayerPlugin {
         .max(-(win_info.height / 2. - PlayerBundle::RADIUS));
     }
   }
+
+  fn handle_rain_collisions(
+    mut commands: Commands,
+    player: Single<&Transform, With<Player>>,
+    rain_query: Query<(Entity, &Transform), With<Rain>>,
+  ) {
+    let player_pos = player.translation.xy();
+    for (rain_entity, rain_trans) in &rain_query {
+      let dist2 = (rain_trans.translation.xy() - player_pos).length_squared();
+      if dist2 < (PlayerBundle::RADIUS + RainBundle::RADIUS).squared() {
+        commands.entity(rain_entity).despawn();
+      }
+    }
+  }
 }
 
 impl Plugin for PlayerPlugin {
@@ -96,6 +112,7 @@ impl Plugin for PlayerPlugin {
         FixedUpdate,
         Self::move_player.before(MovePlugin::apply_moves),
       )
-      .add_systems(FixedUpdate, Self::snap_in_bounds);
+      .add_systems(FixedUpdate, Self::snap_in_bounds)
+      .add_systems(FixedUpdate, Self::handle_rain_collisions);
   }
 }

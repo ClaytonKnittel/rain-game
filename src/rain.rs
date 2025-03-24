@@ -24,16 +24,16 @@ use crate::{
 
 #[derive(Component)]
 #[require(MoveComponent, GravityComponent)]
-struct Rain;
+pub struct Rain;
 
 #[derive(Bundle)]
-struct RainBundle {
+pub struct RainBundle {
   screen_object: ScreenObjectBundle,
   rain: Rain,
 }
 
 impl RainBundle {
-  const RADIUS: f32 = 10.0;
+  pub const RADIUS: f32 = 10.0;
 
   fn spawn_rain(mut commands: Commands, pos: Vec2) {
     commands.spawn_screen_object(
