@@ -1,21 +1,21 @@
 use bevy::{
   app::{App, FixedUpdate, Plugin, Startup},
-  asset::Assets,
   color::Color,
   ecs::{
     bundle::Bundle,
     component::Component,
     query::With,
-    system::{Commands, Query, Res, ResMut},
+    system::{Commands, Query, Res},
   },
   input::{keyboard::KeyCode, ButtonInput},
   math::primitives::Circle,
-  render::mesh::{Mesh, Mesh2d},
-  sprite::{ColorMaterial, MeshMaterial2d},
   transform::components::Transform,
 };
 
-use crate::win_info::WinInfo;
+use crate::{
+  screen_object::{ScreenObjectBundle, SpawnScreenObjectExt},
+  win_info::WinInfo,
+};
 
 /// Component that identifies the player.
 #[derive(Component)]
@@ -23,36 +23,26 @@ struct Player;
 
 #[derive(Bundle)]
 struct PlayerBundle {
-  mesh: Mesh2d,
-  material: MeshMaterial2d<ColorMaterial>,
-  transform: Transform,
+  screen_object: ScreenObjectBundle,
   player: Player,
 }
 
 impl PlayerBundle {
   const RADIUS: f32 = 50.0;
 
-  fn new(meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> Self {
-    Self {
-      mesh: Mesh2d(meshes.add(Circle::new(Self::RADIUS))),
-      material: MeshMaterial2d(materials.add(Color::hsl(0.0, 0.95, 0.7))),
-      transform: Transform::from_xyz(0.0, 0.0, 0.0),
-      player: Player,
-    }
+  fn spawn_player(mut commands: Commands) {
+    commands.spawn_screen_object(
+      Circle::new(Self::RADIUS),
+      Color::hsl(0.0, 0.95, 0.7),
+      Transform::from_xyz(0.0, 0.0, 0.0),
+      |screen_object| Self { screen_object, player: Player },
+    );
   }
 }
 
 pub struct PlayerPlugin;
 
 impl PlayerPlugin {
-  fn spawn_player(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-  ) {
-    commands.spawn(PlayerBundle::new(&mut meshes, &mut materials));
-  }
-
   fn move_player(
     win_info: Res<WinInfo>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
@@ -92,7 +82,7 @@ impl PlayerPlugin {
 impl Plugin for PlayerPlugin {
   fn build(&self, app: &mut App) {
     app
-      .add_systems(Startup, Self::spawn_player)
+      .add_systems(Startup, PlayerBundle::spawn_player)
       .add_systems(FixedUpdate, Self::move_player);
   }
 }

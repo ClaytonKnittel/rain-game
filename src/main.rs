@@ -1,5 +1,6 @@
 mod framerate;
 mod player;
+mod screen_object;
 mod win_info;
 mod world_init;
 
