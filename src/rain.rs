@@ -14,7 +14,7 @@ use bevy::{
   time::{Time, Timer, TimerMode},
   transform::components::Transform,
 };
-use rand::{thread_rng, Rng};
+use rand::Rng;
 
 use crate::{
   gravity::GravityComponent,
