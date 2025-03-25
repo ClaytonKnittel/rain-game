@@ -14,6 +14,7 @@ use bevy::{
   time::{Time, Timer, TimerMode},
   transform::components::Transform,
 };
+use rand::{thread_rng, Rng};
 
 use crate::{
   gravity::GravityComponent,
@@ -60,7 +61,8 @@ impl RainPlugin {
     mut timer: ResMut<RainTimer>,
   ) {
     if timer.0.tick(time.delta()).just_finished() {
-      RainBundle::spawn_rain(commands, Vec2 { x: 0., y: win_info.height / 2. });
+      let x = rand::rng().random_range((-win_info.width / 2.)..win_info.width / 2.);
+      RainBundle::spawn_rain(commands, Vec2 { x, y: win_info.height / 2. });
     }
   }
 
