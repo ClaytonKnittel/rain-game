@@ -36,7 +36,7 @@ impl PlayerBundle {
   const RADIUS: f32 = 50.0;
 
   fn spawn_player(mut commands: Commands) {
-    commands.queue(move |world: &mut World| {
+    commands.queue(|world: &mut World| {
       let screen_object = ScreenObjectBundle::new(
         Circle::new(Self::RADIUS),
         Color::hsl(0.0, 0.95, 0.7),
