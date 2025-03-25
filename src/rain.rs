@@ -9,6 +9,7 @@ use bevy::{
     entity::Entity,
     query::With,
     system::{Commands, Query, Res, ResMut, Resource},
+    world::World,
   },
   math::{primitives::Circle, Vec2},
   time::{Time, Timer, TimerMode},
@@ -17,9 +18,7 @@ use bevy::{
 use rand::Rng;
 
 use crate::{
-  gravity::GravityComponent,
-  movable::MoveComponent,
-  screen_object::{ScreenObjectBundle, SpawnScreenObjectExt},
+  gravity::GravityComponent, movable::MoveComponent, screen_object::ScreenObjectBundle,
   win_info::WinInfo,
 };
 
@@ -37,12 +36,15 @@ impl RainBundle {
   pub const RADIUS: f32 = 10.0;
 
   fn spawn_rain(mut commands: Commands, pos: Vec2) {
-    commands.spawn_screen_object(
-      Circle::new(Self::RADIUS),
-      Color::srgb(0.2, 0.6, 0.95),
-      Transform::from_xyz(pos.x, pos.y, -1.0),
-      |screen_object| Self { screen_object, rain: Rain },
-    );
+    commands.queue(move |world: &mut World| {
+      let screen_object = ScreenObjectBundle::new(
+        Circle::new(Self::RADIUS),
+        Color::srgb(0.2, 0.6, 0.95),
+        Transform::from_xyz(pos.x, pos.y, -1.0),
+        world,
+      );
+      world.spawn(Self { screen_object, rain: Rain });
+    });
   }
 }
 

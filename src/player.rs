@@ -7,6 +7,7 @@ use bevy::{
     query::{With, Without},
     schedule::IntoSystemConfigs,
     system::{Commands, Query, Res, Single},
+    world::World,
   },
   input::{keyboard::KeyCode, ButtonInput},
   math::{primitives::Circle, FloatPow, Vec3Swizzles},
@@ -16,7 +17,7 @@ use bevy::{
 use crate::{
   movable::{MoveComponent, MovePlugin},
   rain::{Rain, RainBundle},
-  screen_object::{ScreenObjectBundle, SpawnScreenObjectExt},
+  screen_object::ScreenObjectBundle,
   win_info::WinInfo,
 };
 
@@ -35,12 +36,15 @@ impl PlayerBundle {
   const RADIUS: f32 = 50.0;
 
   fn spawn_player(mut commands: Commands) {
-    commands.spawn_screen_object(
-      Circle::new(Self::RADIUS),
-      Color::hsl(0.0, 0.95, 0.7),
-      Transform::from_xyz(0.0, 0.0, 0.0),
-      |screen_object| Self { screen_object, player: Player },
-    );
+    commands.queue(move |world: &mut World| {
+      let screen_object = ScreenObjectBundle::new(
+        Circle::new(Self::RADIUS),
+        Color::hsl(0.0, 0.95, 0.7),
+        Transform::from_xyz(0.0, 0.0, 0.0),
+        world,
+      );
+      world.spawn(Self { screen_object, player: Player });
+    });
   }
 }
 
