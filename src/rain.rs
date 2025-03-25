@@ -71,9 +71,11 @@ impl RainPlugin {
     win_info: Res<WinInfo>,
     query: Query<(Entity, &Transform), With<Rain>>,
   ) {
-    let min_y = -win_info.height / 2.;
+    let min_y = -win_info.height / 2. - RainBundle::RADIUS;
+    let x_bound = win_info.width / 2. + RainBundle::RADIUS;
     for (entity, transform) in &query {
-      if transform.translation.y < min_y {
+      if transform.translation.y < min_y || !(-x_bound..x_bound).contains(&transform.translation.x)
+      {
         commands.entity(entity).despawn();
       }
     }
