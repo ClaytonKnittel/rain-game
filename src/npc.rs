@@ -85,12 +85,7 @@ impl NpcState {
     } else if !matches!(self, Self::Idle { .. }) {
       *self = Self::make_idle_state();
     } else {
-      match rand::rng().random_range(0..3) {
-        0 => *self = Self::make_idle_state(),
-        1 => *self = Self::make_walk_state(false),
-        2 => *self = Self::make_walk_state(true),
-        _ => unreachable!(),
-      }
+      *self = Self::make_walk_state(rand::rng().random_bool(0.5));
     }
   }
 }
