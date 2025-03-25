@@ -7,15 +7,9 @@ use bevy::{
 #[derive(Resource)]
 struct FramerateDisplayTimer(Timer);
 
-#[derive(Resource)]
+#[derive(Default, Resource)]
 struct FramerateCounter {
   frames: u32,
-}
-
-impl Default for FramerateCounter {
-  fn default() -> Self {
-    Self { frames: 0 }
-  }
 }
 
 pub struct FrameratePlugin;
