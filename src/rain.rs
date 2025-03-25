@@ -13,13 +13,12 @@ use bevy::{
   },
   math::{primitives::Circle, Vec2},
   time::{Time, Timer, TimerMode},
-  transform::components::Transform,
 };
 use rand::Rng;
 
 use crate::{
-  gravity::GravityComponent, movable::MoveComponent, screen_object::ScreenObjectBundle,
-  win_info::WinInfo,
+  gravity::GravityComponent, movable::MoveComponent, position::Position,
+  screen_object::ScreenObjectBundle, win_info::WinInfo,
 };
 
 #[derive(Component)]
@@ -29,6 +28,7 @@ pub struct Rain;
 #[derive(Bundle)]
 pub struct RainBundle {
   screen_object: ScreenObjectBundle,
+  pos: Position,
   rain: Rain,
 }
 
@@ -40,10 +40,14 @@ impl RainBundle {
       let screen_object = ScreenObjectBundle::new(
         Circle::new(Self::RADIUS),
         Color::srgb(0.2, 0.6, 0.95),
-        Transform::from_xyz(pos.x, pos.y, -1.0),
+        -1.,
         world,
       );
-      world.spawn(Self { screen_object, rain: Rain });
+      world.spawn(Self {
+        screen_object,
+        pos: Position(pos),
+        rain: Rain,
+      });
     });
   }
 }
@@ -71,13 +75,12 @@ impl RainPlugin {
   fn despawn_raindrops(
     mut commands: Commands,
     win_info: Res<WinInfo>,
-    query: Query<(Entity, &Transform), With<Rain>>,
+    query: Query<(Entity, &Position), With<Rain>>,
   ) {
     let min_y = -win_info.height / 2. - RainBundle::RADIUS;
     let x_bound = win_info.width / 2. + RainBundle::RADIUS;
-    for (entity, transform) in &query {
-      if transform.translation.y < min_y || !(-x_bound..x_bound).contains(&transform.translation.x)
-      {
+    for (entity, Position(pos)) in &query {
+      if pos.y < min_y || !(-x_bound..x_bound).contains(&pos.x) {
         commands.entity(entity).despawn();
       }
     }

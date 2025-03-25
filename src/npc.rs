@@ -1,22 +1,28 @@
 use std::time::Duration;
 
 use bevy::{
-  app::{App, FixedUpdate, Plugin, Startup},
+  app::{App, FixedUpdate, Plugin, Startup, Update},
   color::Color,
   ecs::{
     bundle::Bundle,
     component::Component,
-    query::With,
+    query::{With, Without},
+    schedule::IntoSystemConfigs,
     system::{Commands, Query, Res},
     world::World,
   },
-  math::{primitives::Rectangle, FloatPow, Vec2, Vec3Swizzles},
+  hierarchy::{BuildChildren, ChildBuild, Parent},
+  math::{primitives::Rectangle, FloatPow, Vec2},
   time::{Time, Timer, TimerMode},
-  transform::components::Transform,
 };
 use rand::Rng;
 
-use crate::{movable::MoveComponent, rain::Rain, screen_object::ScreenObjectBundle};
+use crate::{
+  movable::MoveComponent,
+  position::{Position, PositionPlugin},
+  rain::Rain,
+  screen_object::ScreenObjectBundle,
+};
 
 enum NpcState {
   Idle { timer: Timer },
@@ -104,8 +110,18 @@ struct Npc {
 
 #[derive(Bundle)]
 struct NpcBundle {
-  screen_object: ScreenObjectBundle,
   npc: Npc,
+  pos: Position,
+}
+
+#[derive(Component)]
+#[require(Position)]
+struct NpcBody;
+
+#[derive(Bundle)]
+struct NpcBodyBundle {
+  screen_object: ScreenObjectBundle,
+  npc_body: NpcBody,
 }
 
 impl NpcBundle {
@@ -114,13 +130,25 @@ impl NpcBundle {
 
   fn spawn(mut commands: Commands) {
     commands.queue(|world: &mut World| {
-      let screen_object = ScreenObjectBundle::new(
-        Rectangle::from_size(Vec2 { x: Self::WIDTH, y: Self::HEIGHT }),
-        Color::srgb(0.8, 0.7, 0.6),
-        Transform::from_xyz(0., -200., -1.0),
-        world,
-      );
-      world.spawn(Self { screen_object, npc: Npc::default() });
+      let body = NpcBodyBundle {
+        screen_object: ScreenObjectBundle::new(
+          Rectangle::from_size(Vec2 { x: Self::WIDTH, y: Self::HEIGHT }),
+          Color::srgb(0.8, 0.7, 0.6),
+          // This is not getting picked up????
+          2.0,
+          world,
+        ),
+        npc_body: NpcBody,
+      };
+
+      world
+        .spawn(Self {
+          npc: Npc::default(),
+          pos: Position(Vec2::new(0., -200.)),
+        })
+        .with_children(move |parent| {
+          parent.spawn(body);
+        });
     });
   }
 }
@@ -160,21 +188,28 @@ impl NpcPlugin {
 
   fn control_npcs(
     time: Res<Time>,
-    mut npc_query: Query<(&mut Npc, &Transform, &mut MoveComponent)>,
-    rain_query: Query<&Transform, With<Rain>>,
+    mut npc_query: Query<(&mut Npc, &Position, &mut MoveComponent)>,
+    rain_query: Query<&Position, With<Rain>>,
   ) {
-    for (mut npc, npc_pos, mut npc_vel) in &mut npc_query {
-      let npc_pos = npc_pos.translation.xy();
+    for (mut npc, &Position(npc_pos), mut npc_vel) in &mut npc_query {
       npc.state.tick(
         &time,
         npc_pos,
-        Self::find_nearest_visible_rain_pos(
-          npc_pos,
-          rain_query.iter().map(|rain_pos| rain_pos.translation.xy()),
-        ),
+        Self::find_nearest_visible_rain_pos(npc_pos, rain_query.iter().map(|rain_pos| rain_pos.0)),
       );
 
       npc_vel.delta = npc.state.speed();
+    }
+  }
+
+  fn sync_body_positions(
+    npc_query: Query<&Position, With<Npc>>,
+    mut child_query: Query<(&mut Position, &Parent), (With<NpcBody>, Without<Npc>)>,
+  ) {
+    for (mut child_pos, parent) in &mut child_query {
+      let npc_pos = npc_query.get(parent.get()).unwrap();
+      //   println!("Updating child pos {} to {}", child_pos.0, npc_pos.0);
+      child_pos.0 = npc_pos.0;
     }
   }
 }
@@ -183,6 +218,10 @@ impl Plugin for NpcPlugin {
   fn build(&self, app: &mut App) {
     app
       .add_systems(Startup, Self::spawn_npcs)
-      .add_systems(FixedUpdate, Self::control_npcs);
+      .add_systems(FixedUpdate, Self::control_npcs)
+      .add_systems(
+        Update,
+        Self::sync_body_positions.before(PositionPlugin::sync_render_positions),
+      );
   }
 }

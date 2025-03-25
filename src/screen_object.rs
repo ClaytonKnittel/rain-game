@@ -17,7 +17,7 @@ impl ScreenObjectBundle {
   pub fn new(
     mesh: impl Into<Mesh>,
     mesh_material: impl Into<ColorMaterial>,
-    transform: Transform,
+    z_idx: f32,
     world: &mut World,
   ) -> Self {
     let mesh = mesh.into();
@@ -28,6 +28,10 @@ impl ScreenObjectBundle {
     let mut materials = world.resource_mut::<Assets<ColorMaterial>>();
     let material = MeshMaterial2d(materials.add(mesh_material));
 
-    Self { mesh, material, transform }
+    Self {
+      mesh,
+      material,
+      transform: Transform::from_xyz(0., 0., z_idx),
+    }
   }
 }

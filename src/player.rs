@@ -10,12 +10,12 @@ use bevy::{
     world::World,
   },
   input::{keyboard::KeyCode, ButtonInput},
-  math::{primitives::Circle, FloatPow, Vec3Swizzles},
-  transform::components::Transform,
+  math::{primitives::Circle, FloatPow, Vec2},
 };
 
 use crate::{
   movable::{MoveComponent, MovePlugin},
+  position::Position,
   rain::{Rain, RainBundle},
   screen_object::ScreenObjectBundle,
   win_info::WinInfo,
@@ -29,6 +29,7 @@ struct Player;
 #[derive(Bundle)]
 struct PlayerBundle {
   screen_object: ScreenObjectBundle,
+  pos: Position,
   player: Player,
 }
 
@@ -40,10 +41,14 @@ impl PlayerBundle {
       let screen_object = ScreenObjectBundle::new(
         Circle::new(Self::RADIUS),
         Color::hsl(0.0, 0.95, 0.7),
-        Transform::from_xyz(0.0, 0.0, 0.0),
+        1.,
         world,
       );
-      world.spawn(Self { screen_object, player: Player });
+      world.spawn(Self {
+        screen_object,
+        pos: Position(Vec2::ZERO),
+        player: Player,
+      });
     });
   }
 }
@@ -77,15 +82,15 @@ impl PlayerPlugin {
     }
   }
 
-  fn snap_in_bounds(win_info: Res<WinInfo>, mut query: Query<&mut Transform, With<Player>>) {
-    for mut transform in &mut query {
-      transform.translation.x = transform
-        .translation
+  fn snap_in_bounds(win_info: Res<WinInfo>, mut query: Query<&mut Position, With<Player>>) {
+    for mut position in &mut query {
+      position.0.x = position
+        .0
         .x
         .min(win_info.width / 2. - PlayerBundle::RADIUS)
         .max(-(win_info.width / 2. - PlayerBundle::RADIUS));
-      transform.translation.y = transform
-        .translation
+      position.0.y = position
+        .0
         .y
         .min(win_info.height / 2. - PlayerBundle::RADIUS)
         .max(-(win_info.height / 2. - PlayerBundle::RADIUS));
@@ -93,13 +98,12 @@ impl PlayerPlugin {
   }
 
   fn handle_rain_collisions(
-    player: Single<(&Transform, &MoveComponent), With<Player>>,
-    mut rain_query: Query<(&Transform, &mut MoveComponent), (With<Rain>, Without<Player>)>,
+    player: Single<(&Position, &MoveComponent), With<Player>>,
+    mut rain_query: Query<(&Position, &mut MoveComponent), (With<Rain>, Without<Player>)>,
   ) {
-    let (player_pos, player_vel) = player.into_inner();
-    let player_pos = player_pos.translation.xy();
-    for (rain_trans, mut rain_vel) in &mut rain_query {
-      let diff = rain_trans.translation.xy() - player_pos;
+    let (Position(player_pos), player_vel) = player.into_inner();
+    for (Position(rain_pos), mut rain_vel) in &mut rain_query {
+      let diff = rain_pos - player_pos;
       let dist2 = diff.length_squared();
       if dist2 < (PlayerBundle::RADIUS + RainBundle::RADIUS).squared() {
         let relative_vel = rain_vel.delta - player_vel.delta;

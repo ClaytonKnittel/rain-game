@@ -6,6 +6,7 @@ use bevy::{
     schedule::IntoSystemConfigs,
     system::{Query, Res},
   },
+  math::Vec2,
   time::Time,
 };
 
@@ -22,7 +23,7 @@ impl GravityPlugin {
   fn apply_gravity(time: Res<Time>, mut query: Query<&mut MoveComponent, With<GravityComponent>>) {
     let g = Self::G * time.delta_secs();
     for mut move_component in &mut query {
-      move_component.delta.y -= g;
+      move_component.delta += -g * Vec2::Y;
     }
   }
 }
