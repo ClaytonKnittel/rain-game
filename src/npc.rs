@@ -62,6 +62,16 @@ impl NpcState {
     matches!(self, Self::Idle { .. } | Self::Walking { .. })
   }
 
+  fn ensure_dir(&mut self, to_left: bool) {
+    let dir = to_left;
+    match self {
+      Self::Idle { .. } => {}
+      Self::Walking { to_left, .. } | Self::Running { to_left, .. } => {
+        *to_left = dir;
+      }
+    };
+  }
+
   fn tick(&mut self, time: &Time, npc_pos: Vec2, nearest_rain: Option<Vec2>) {
     if self.tick_timer(time).just_finished() || (self.is_alert() && nearest_rain.is_some()) {
       self.transition_states(npc_pos, nearest_rain);
@@ -283,13 +293,31 @@ impl NpcPlugin {
       }
     }
   }
+
+  fn maybe_reflect_npc(npc1: &mut Npc, pos1: &Position, npc2: &mut Npc, pos2: &Position) {
+    let dist = pos1.0.x - pos2.0.x;
+    if dist.abs() <= NpcBundle::WIDTH {
+      npc1.state.ensure_dir(dist < 0.);
+      npc2.state.ensure_dir(dist >= 0.);
+    }
+  }
+
+  fn collide_npcs(mut query: Query<(&mut Npc, &Position), With<Npc>>) {
+    let mut combinations = query.iter_combinations_mut();
+    while let Some([(mut npc1, pos1), (mut npc2, pos2)]) = combinations.fetch_next() {
+      Self::maybe_reflect_npc(&mut npc1, pos1, &mut npc2, pos2);
+    }
+  }
 }
 
 impl Plugin for NpcPlugin {
   fn build(&self, app: &mut App) {
     app
       .add_systems(Startup, Self::spawn_npcs.after(WorldInitPlugin::world_init))
-      .add_systems(FixedUpdate, Self::control_npcs)
+      .add_systems(
+        FixedUpdate,
+        (Self::control_npcs, Self::collide_npcs).chain(),
+      )
       .add_systems(Update, Self::set_eye_visibility);
   }
 }
