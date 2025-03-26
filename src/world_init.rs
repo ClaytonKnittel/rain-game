@@ -14,7 +14,7 @@ use crate::win_info::WinInfo;
 pub struct WorldInitPlugin;
 
 impl WorldInitPlugin {
-  fn world_init(mut commands: Commands) {
+  pub fn world_init(mut commands: Commands) {
     commands.spawn(Camera2d);
     commands.init_resource::<WinInfo>();
   }
@@ -32,7 +32,6 @@ impl WorldInitPlugin {
     for e in resize_events.read() {
       win_info.width = e.width;
       win_info.height = e.height;
-      println!("width = {} height = {}", e.width, e.height);
     }
   }
 }

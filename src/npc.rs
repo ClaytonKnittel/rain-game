@@ -7,6 +7,7 @@ use bevy::{
     bundle::Bundle,
     component::Component,
     query::With,
+    schedule::IntoSystemConfigs,
     system::{Commands, Query, Res},
     world::World,
   },
@@ -20,6 +21,7 @@ use rand::Rng;
 
 use crate::{
   movable::MoveComponent, position::Position, rain::Rain, screen_object::ScreenObjectBundle,
+  win_info::WinInfo, world_init::WorldInitPlugin,
 };
 
 enum NpcState {
@@ -140,7 +142,7 @@ impl NpcBundle {
   const WIDTH: f32 = 50.;
   const HEIGHT: f32 = 80.;
 
-  fn spawn(mut commands: Commands) {
+  fn spawn(mut commands: Commands, pos: Position) {
     commands.queue(|world: &mut World| {
       let body_screen_object = ScreenObjectBundle::new(
         Rectangle::from_size(Vec2 { x: Self::WIDTH, y: Self::HEIGHT }),
@@ -162,10 +164,7 @@ impl NpcBundle {
       );
 
       world
-        .spawn(Self {
-          npc: Npc::default(),
-          pos: Position(Vec2::new(0., -200.)),
-        })
+        .spawn(Self { npc: Npc::default(), pos })
         .with_children(move |parent| {
           parent.spawn(NpcBodyBundle {
             screen_object: body_screen_object,
@@ -199,8 +198,14 @@ pub struct NpcPlugin;
 impl NpcPlugin {
   const SIGHT_DIST: f32 = 200.;
 
-  fn spawn_npcs(commands: Commands) {
-    NpcBundle::spawn(commands);
+  fn spawn_npcs(mut commands: Commands, win_info: Res<WinInfo>) {
+    let height = -win_info.height / 4.;
+    NpcBundle::spawn(
+      commands.reborrow(),
+      Position(Vec2::new(-win_info.width / 4., height)),
+    );
+    NpcBundle::spawn(commands.reborrow(), Position(Vec2::new(0., height)));
+    NpcBundle::spawn(commands, Position(Vec2::new(win_info.width / 4., height)));
   }
 
   fn find_nearest_visible_rain_pos(
@@ -283,7 +288,7 @@ impl NpcPlugin {
 impl Plugin for NpcPlugin {
   fn build(&self, app: &mut App) {
     app
-      .add_systems(Startup, Self::spawn_npcs)
+      .add_systems(Startup, Self::spawn_npcs.after(WorldInitPlugin::world_init))
       .add_systems(FixedUpdate, Self::control_npcs)
       .add_systems(Update, Self::set_eye_visibility);
   }
