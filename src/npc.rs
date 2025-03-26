@@ -6,6 +6,7 @@ use bevy::{
   ecs::{
     bundle::Bundle,
     component::Component,
+    entity::Entity,
     query::With,
     schedule::IntoSystemConfigs,
     system::{Commands, Query, Res},
@@ -20,8 +21,12 @@ use bevy::{
 use rand::Rng;
 
 use crate::{
-  movable::MoveComponent, position::Position, rain::Rain, screen_object::ScreenObjectBundle,
-  win_info::WinInfo, world_init::WorldInitPlugin,
+  movable::MoveComponent,
+  position::Position,
+  rain::{Rain, RainBundle},
+  screen_object::ScreenObjectBundle,
+  win_info::WinInfo,
+  world_init::WorldInitPlugin,
 };
 
 enum NpcState {
@@ -112,10 +117,39 @@ impl Default for NpcState {
   }
 }
 
+#[derive(Default)]
+enum Wetness {
+  #[default]
+  Dry,
+  Wet {
+    level: u8,
+  },
+  Soaked,
+}
+
+impl Wetness {
+  const MAX_WETNESS: u8 = 3;
+
+  fn absorb_rain(&mut self) {
+    match self {
+      Self::Dry => *self = Self::Wet { level: 1 },
+      Self::Wet { level } => {
+        if *level == Self::MAX_WETNESS {
+          *self = Self::Soaked;
+        } else {
+          *self = Self::Wet { level: *level + 1 };
+        }
+      }
+      Self::Soaked => {}
+    }
+  }
+}
+
 #[derive(Component, Default)]
 #[require(MoveComponent, Transform)]
 struct Npc {
   state: NpcState,
+  wetness: Wetness,
 }
 
 #[derive(Bundle)]
@@ -152,22 +186,26 @@ impl NpcBundle {
   const WIDTH: f32 = 50.;
   const HEIGHT: f32 = 80.;
 
+  fn bounding_rect() -> Rectangle {
+    Rectangle::new(Self::WIDTH, Self::HEIGHT)
+  }
+
   fn spawn(mut commands: Commands, pos: Position) {
     commands.queue(|world: &mut World| {
       let body_screen_object = ScreenObjectBundle::new(
-        Rectangle::from_size(Vec2 { x: Self::WIDTH, y: Self::HEIGHT }),
+        Self::bounding_rect(),
         Color::srgb(0.8, 0.7, 0.6),
         1.0,
         world,
       );
       let l_eye_screen_object = ScreenObjectBundle::new(
-        Rectangle::from_size(Vec2 { x: Self::WIDTH / 4., y: Self::WIDTH / 4. }),
+        Rectangle::new(Self::WIDTH / 4., Self::WIDTH / 4.),
         Color::srgb(0.1, 0.4, 0.4),
         2.0,
         world,
       );
       let r_eye_screen_object = ScreenObjectBundle::new(
-        Rectangle::from_size(Vec2 { x: Self::WIDTH / 4., y: Self::WIDTH / 4. }),
+        Rectangle::new(Self::WIDTH / 4., Self::WIDTH / 4.),
         Color::srgb(0.1, 0.4, 0.4),
         2.0,
         world,
@@ -220,41 +258,57 @@ impl NpcPlugin {
 
   fn find_nearest_visible_rain_pos(
     npc_pos: Vec2,
-    rain: impl IntoIterator<Item = Vec2>,
-  ) -> Option<Vec2> {
-    rain.into_iter().fold(None, |nearest_rain, rain_pos| {
-      let dist = (rain_pos - npc_pos).length_squared();
-      if dist < Self::SIGHT_DIST.squared() {
-        Some(
+    rain: impl IntoIterator<Item = (Entity, Vec2)>,
+  ) -> Option<(Entity, Vec2)> {
+    rain
+      .into_iter()
+      .fold(None, |nearest_rain, (entity, rain_pos)| {
+        let dist = (rain_pos - npc_pos).length_squared();
+        if dist < Self::SIGHT_DIST.squared() {
+          Some(
+            nearest_rain
+              .map(|(nearest_entity, nearest_rain_pos)| {
+                if dist < (nearest_rain_pos - npc_pos).length_squared() {
+                  (entity, rain_pos)
+                } else {
+                  (nearest_entity, nearest_rain_pos)
+                }
+              })
+              .unwrap_or((entity, rain_pos)),
+          )
+        } else {
           nearest_rain
-            .map(|nearest_rain_pos| {
-              if dist < (nearest_rain_pos - npc_pos).length_squared() {
-                rain_pos
-              } else {
-                nearest_rain_pos
-              }
-            })
-            .unwrap_or(rain_pos),
-        )
-      } else {
-        nearest_rain
-      }
-    })
+        }
+      })
   }
 
   fn control_npcs(
+    mut commands: Commands,
     time: Res<Time>,
     mut npc_query: Query<(&mut Npc, &Position, &mut MoveComponent)>,
-    rain_query: Query<&Position, With<Rain>>,
+    rain_query: Query<(Entity, &Position), With<Rain>>,
   ) {
     for (mut npc, &Position(npc_pos), mut npc_vel) in &mut npc_query {
-      npc.state.tick(
-        &time,
+      let nearest_rain = Self::find_nearest_visible_rain_pos(
         npc_pos,
-        Self::find_nearest_visible_rain_pos(npc_pos, rain_query.iter().map(|rain_pos| rain_pos.0)),
+        rain_query
+          .iter()
+          .map(|(entity, rain_pos)| (entity, rain_pos.0)),
       );
+      npc
+        .state
+        .tick(&time, npc_pos, nearest_rain.map(|(_, pos)| pos));
 
       npc_vel.delta = npc.state.speed();
+
+      if let Some((rain_entity, nearest_rain)) = nearest_rain {
+        let dist = nearest_rain - npc_pos;
+        let closest_point = NpcBundle::bounding_rect().closest_point(dist);
+        if (closest_point - dist).length_squared() < RainBundle::RADIUS.squared() {
+          npc.wetness.absorb_rain();
+          commands.entity(rain_entity).despawn();
+        }
+      }
     }
   }
 
@@ -262,6 +316,7 @@ impl NpcPlugin {
     npc_query: Query<&Npc>,
     mut eye_query: Query<(&mut Visibility, &NpcEye, &Parent)>,
   ) {
+    eye_query.iter().next();
     for (mut visibility, eye, npc_parent) in &mut eye_query {
       let npc = npc_query.get(npc_parent.get()).unwrap();
 
