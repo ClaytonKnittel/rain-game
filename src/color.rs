@@ -61,7 +61,6 @@ impl ColorComponent {
     if self.desired_color == self.color {
       return;
     }
-    println!("Changed!");
 
     material.0 = materials.add(Color::from(self.desired_color));
     self.color = self.desired_color;
