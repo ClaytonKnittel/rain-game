@@ -41,7 +41,7 @@ impl PlayerBundle {
       let screen_object = ScreenObjectBundle::new(
         Circle::new(Self::RADIUS),
         Color::hsl(0.0, 0.95, 0.7),
-        1.,
+        10.,
         world,
       );
       world.spawn(Self {

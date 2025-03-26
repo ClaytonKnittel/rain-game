@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use bevy::{
-  app::{App, FixedUpdate, Plugin, Startup},
+  app::{App, FixedUpdate, Plugin, Startup, Update},
   color::Color,
   ecs::{
     bundle::Bundle,
@@ -10,8 +10,9 @@ use bevy::{
     system::{Commands, Query, Res},
     world::World,
   },
-  hierarchy::{BuildChildren, ChildBuild},
+  hierarchy::{BuildChildren, ChildBuild, Parent},
   math::{primitives::Rectangle, FloatPow, Vec2},
+  render::view::Visibility,
   time::{Time, Timer, TimerMode},
   transform::components::Transform,
 };
@@ -121,15 +122,41 @@ struct NpcBodyBundle {
   pos: Position,
 }
 
+#[derive(Component)]
+#[require(Visibility)]
+enum NpcEye {
+  Left,
+  Right,
+}
+
+#[derive(Bundle)]
+struct NpcEyeBundle {
+  screen_object: ScreenObjectBundle,
+  npc_eye: NpcEye,
+  pos: Position,
+}
+
 impl NpcBundle {
   const WIDTH: f32 = 50.;
   const HEIGHT: f32 = 80.;
 
   fn spawn(mut commands: Commands) {
     commands.queue(|world: &mut World| {
-      let screen_object = ScreenObjectBundle::new(
+      let body_screen_object = ScreenObjectBundle::new(
         Rectangle::from_size(Vec2 { x: Self::WIDTH, y: Self::HEIGHT }),
         Color::srgb(0.8, 0.7, 0.6),
+        1.0,
+        world,
+      );
+      let l_eye_screen_object = ScreenObjectBundle::new(
+        Rectangle::from_size(Vec2 { x: Self::WIDTH / 4., y: Self::WIDTH / 4. }),
+        Color::srgb(0.1, 0.4, 0.4),
+        2.0,
+        world,
+      );
+      let r_eye_screen_object = ScreenObjectBundle::new(
+        Rectangle::from_size(Vec2 { x: Self::WIDTH / 4., y: Self::WIDTH / 4. }),
+        Color::srgb(0.1, 0.4, 0.4),
         2.0,
         world,
       );
@@ -141,9 +168,26 @@ impl NpcBundle {
         })
         .with_children(move |parent| {
           parent.spawn(NpcBodyBundle {
-            screen_object,
+            screen_object: body_screen_object,
             npc_body: NpcBody,
             pos: Position(Vec2::ZERO),
+          });
+
+          parent.spawn(NpcEyeBundle {
+            screen_object: l_eye_screen_object,
+            npc_eye: NpcEye::Left,
+            pos: Position(Vec2 {
+              x: -Self::WIDTH / 4.,
+              y: Self::HEIGHT * 0.4,
+            }),
+          });
+          parent.spawn(NpcEyeBundle {
+            screen_object: r_eye_screen_object,
+            npc_eye: NpcEye::Right,
+            pos: Position(Vec2 {
+              x: Self::WIDTH / 4.,
+              y: Self::HEIGHT * 0.4,
+            }),
           });
         });
     });
@@ -198,12 +242,49 @@ impl NpcPlugin {
       npc_vel.delta = npc.state.speed();
     }
   }
+
+  fn set_eye_visibility(
+    npc_query: Query<&Npc>,
+    mut eye_query: Query<(&mut Visibility, &NpcEye, &Parent)>,
+  ) {
+    for (mut visibility, eye, npc_parent) in &mut eye_query {
+      let npc = npc_query.get(npc_parent.get()).unwrap();
+
+      match eye {
+        NpcEye::Left => {
+          *visibility = match npc.state {
+            NpcState::Idle { .. } => Visibility::Visible,
+            NpcState::Walking { to_left, .. } | NpcState::Running { to_left, .. } => {
+              if to_left {
+                Visibility::Visible
+              } else {
+                Visibility::Hidden
+              }
+            }
+          }
+        }
+        NpcEye::Right => {
+          *visibility = match npc.state {
+            NpcState::Idle { .. } => Visibility::Visible,
+            NpcState::Walking { to_left, .. } | NpcState::Running { to_left, .. } => {
+              if !to_left {
+                Visibility::Visible
+              } else {
+                Visibility::Hidden
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 impl Plugin for NpcPlugin {
   fn build(&self, app: &mut App) {
     app
       .add_systems(Startup, Self::spawn_npcs)
-      .add_systems(FixedUpdate, Self::control_npcs);
+      .add_systems(FixedUpdate, Self::control_npcs)
+      .add_systems(Update, Self::set_eye_visibility);
   }
 }
