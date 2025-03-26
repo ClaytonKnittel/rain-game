@@ -40,7 +40,32 @@ impl From<StrictColor> for Color {
 
 #[derive(Component)]
 pub struct ColorComponent {
-  pub color: StrictColor,
+  color: StrictColor,
+  desired_color: StrictColor,
+}
+
+impl ColorComponent {
+  fn new(color: StrictColor) -> Self {
+    Self { color, desired_color: color }
+  }
+
+  pub fn set_color(&mut self, desired_color: StrictColor) {
+    self.desired_color = desired_color;
+  }
+
+  fn sync_color(
+    &mut self,
+    material: &mut MeshMaterial2d<ColorMaterial>,
+    materials: &mut Assets<ColorMaterial>,
+  ) {
+    if self.desired_color == self.color {
+      return;
+    }
+    println!("Changed!");
+
+    material.0 = materials.add(Color::from(self.desired_color));
+    self.color = self.desired_color;
+  }
 }
 
 #[derive(Bundle)]
@@ -56,7 +81,7 @@ impl ColorBundle {
       .unwrap();
 
     Self {
-      color: ColorComponent { color },
+      color: ColorComponent::new(color),
       material: MeshMaterial2d(color_handle),
     }
   }
@@ -75,12 +100,12 @@ impl ColorPlugin {
   fn handle_changed_entities(
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut query: Query<
-      (&ColorComponent, &mut MeshMaterial2d<ColorMaterial>),
+      (&mut ColorComponent, &mut MeshMaterial2d<ColorMaterial>),
       Changed<ColorComponent>,
     >,
   ) {
-    for (color, mut material) in &mut query {
-      material.0 = materials.add(Color::from(color.color));
+    for (mut color, mut material) in &mut query {
+      color.sync_color(&mut material, &mut materials);
     }
   }
 }

@@ -361,7 +361,7 @@ impl NpcPlugin {
         _ => StrictColor::new(190, 100, 200),
       };
 
-      body_color.color = color;
+      body_color.set_color(color);
     }
   }
 
