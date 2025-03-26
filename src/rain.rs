@@ -58,7 +58,8 @@ struct RainTimer(Timer);
 pub struct RainPlugin;
 
 impl RainPlugin {
-  const TIMEOUT: Duration = Duration::from_secs(1);
+  // const TIMEOUT: Duration = Duration::from_secs(1);
+  const TIMEOUT: Duration = Duration::from_millis(200);
 
   fn spawn_raindrops(
     commands: Commands,

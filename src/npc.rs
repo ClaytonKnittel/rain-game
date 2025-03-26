@@ -21,6 +21,7 @@ use bevy::{
 use rand::Rng;
 
 use crate::{
+  color::{ColorComponent, StrictColor},
   movable::MoveComponent,
   position::Position,
   rain::{Rain, RainBundle},
@@ -349,6 +350,21 @@ impl NpcPlugin {
     }
   }
 
+  fn set_npc_colors(
+    npc_query: Query<&Npc>,
+    mut eye_query: Query<(&mut ColorComponent, &Parent), With<NpcBody>>,
+  ) {
+    for (mut body_color, parent) in &mut eye_query {
+      let npc = npc_query.get(parent.get()).unwrap();
+      let color = match npc.wetness {
+        Wetness::Dry => StrictColor::new(190, 100, 150),
+        _ => StrictColor::new(190, 100, 200),
+      };
+
+      body_color.color = color;
+    }
+  }
+
   fn maybe_reflect_npc(npc1: &mut Npc, pos1: &Position, npc2: &mut Npc, pos2: &Position) {
     let dist = pos1.0.x - pos2.0.x;
     if dist.abs() <= NpcBundle::WIDTH {
@@ -373,6 +389,6 @@ impl Plugin for NpcPlugin {
         FixedUpdate,
         (Self::control_npcs, Self::collide_npcs).chain(),
       )
-      .add_systems(Update, Self::set_eye_visibility);
+      .add_systems(Update, (Self::set_eye_visibility, Self::set_npc_colors));
   }
 }
