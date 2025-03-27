@@ -144,6 +144,17 @@ impl Wetness {
       Self::Soaked => {}
     }
   }
+
+  fn color(&self) -> StrictColor {
+    match self {
+      Self::Dry => StrictColor::new(0xEB, 0xBF, 0x6E),
+      Self::Wet { level: 1 } => StrictColor::new(0xEB, 0xAD, 0x6E),
+      Self::Wet { level: 2 } => StrictColor::new(0xEB, 0x96, 0x6D),
+      Self::Wet { level: 3 } => StrictColor::new(0xEB, 0x80, 0x6C),
+      Self::Soaked => StrictColor::new(0xEB, 0x6C, 0x73),
+      _ => unreachable!(),
+    }
+  }
 }
 
 #[derive(Component, Default)]
@@ -356,10 +367,7 @@ impl NpcPlugin {
   ) {
     for (mut body_color, parent) in &mut eye_query {
       let npc = npc_query.get(parent.get()).unwrap();
-      let color = match npc.wetness {
-        Wetness::Dry => StrictColor::new(190, 100, 150),
-        _ => StrictColor::new(190, 100, 200),
-      };
+      let color = npc.wetness.color();
 
       body_color.set_color(color);
     }
@@ -373,10 +381,23 @@ impl NpcPlugin {
     }
   }
 
-  fn collide_npcs(mut query: Query<(&mut Npc, &Position), With<Npc>>) {
+  fn maybe_reflect_wall(win_info: &WinInfo, npc: &mut Npc, pos: &Position) {
+    let edge_dist = win_info.width / 2. - NpcBundle::WIDTH / 2.;
+    if pos.0.x < -edge_dist {
+      npc.state.ensure_dir(false);
+    }
+    if pos.0.x > edge_dist {
+      npc.state.ensure_dir(true);
+    }
+  }
+
+  fn collide_npcs(win_info: Res<WinInfo>, mut query: Query<(&mut Npc, &Position), With<Npc>>) {
     let mut combinations = query.iter_combinations_mut();
     while let Some([(mut npc1, pos1), (mut npc2, pos2)]) = combinations.fetch_next() {
       Self::maybe_reflect_npc(&mut npc1, pos1, &mut npc2, pos2);
+    }
+    for (mut npc, pos) in &mut query {
+      Self::maybe_reflect_wall(&win_info, &mut npc, pos);
     }
   }
 }
