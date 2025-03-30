@@ -38,8 +38,8 @@ struct PlayerBundle {
 
 impl PlayerBundle {
   const IMG_WIDTH: f32 = 600.;
-  const IMG_HEIGHT: f32 = 672.;
-  const ASPECT_RATIO: f32 = Self::IMG_HEIGHT / Self::IMG_WIDTH;
+  // const IMG_HEIGHT: f32 = 672.;
+  // const ASPECT_RATIO: f32 = Self::IMG_HEIGHT / Self::IMG_WIDTH;
 
   const WIDTH: f32 = 100.0;
 
@@ -63,6 +63,7 @@ pub struct PlayerPlugin;
 
 impl PlayerPlugin {
   const SPEED: f32 = 200.0;
+  const RAIN_RESTITUTION: f32 = 0.3;
 
   fn move_player(
     keyboard_input: Res<ButtonInput<KeyCode>>,
@@ -118,7 +119,7 @@ impl PlayerPlugin {
         let dot = diff.dot(relative_vel);
         if dot < 0. {
           let orthogonal_vel = diff * dot;
-          let impulse = -2. * orthogonal_vel;
+          let impulse = -(1. + Self::RAIN_RESTITUTION) * orthogonal_vel;
           rain_vel.delta += impulse;
         }
       }
