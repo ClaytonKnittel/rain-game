@@ -18,7 +18,7 @@ pub struct GravityComponent;
 pub struct GravityPlugin;
 
 impl GravityPlugin {
-  const G: f32 = 100.0;
+  const G: f32 = 400.0;
 
   fn apply_gravity(time: Res<Time>, mut query: Query<&mut MoveComponent, With<GravityComponent>>) {
     let g = Self::G * time.delta_secs();

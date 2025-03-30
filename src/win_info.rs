@@ -8,6 +8,6 @@ pub struct WinInfo {
 
 impl Default for WinInfo {
   fn default() -> Self {
-    Self { width: 500., height: 500. }
+    Self { width: 1280., height: 720. }
   }
 }
