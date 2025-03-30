@@ -1,6 +1,6 @@
 use bevy::{
   app::{App, FixedUpdate, Plugin, Startup},
-  color::Color,
+  asset::AssetServer,
   ecs::{
     bundle::Bundle,
     component::Component,
@@ -9,15 +9,17 @@ use bevy::{
     system::{Commands, Query, Res, Single},
     world::World,
   },
+  image::Image,
   input::{keyboard::KeyCode, ButtonInput},
-  math::{primitives::Circle, FloatPow, Vec2},
+  math::{FloatPow, Vec2, Vec3},
+  sprite::Sprite,
+  transform::components::Transform,
 };
 
 use crate::{
   movable::{MoveComponent, MovePlugin},
   position::Position,
   rain::{Rain, RainBundle},
-  screen_object::ScreenObjectBundle,
   win_info::WinInfo,
 };
 
@@ -28,24 +30,28 @@ struct Player;
 
 #[derive(Bundle)]
 struct PlayerBundle {
-  screen_object: ScreenObjectBundle,
+  sprite: Sprite,
+  transform: Transform,
   pos: Position,
   player: Player,
 }
 
 impl PlayerBundle {
-  const RADIUS: f32 = 50.0;
+  const IMG_WIDTH: f32 = 600.;
+  const IMG_HEIGHT: f32 = 672.;
+  const ASPECT_RATIO: f32 = Self::IMG_HEIGHT / Self::IMG_WIDTH;
 
-  fn spawn_player(mut commands: Commands) {
+  const WIDTH: f32 = 100.0;
+
+  fn spawn_player(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let texture = asset_server.load::<Image>("umbrella/umbrella.png");
+
+    let sprite = Sprite::from_image(texture);
+
     commands.queue(|world: &mut World| {
-      let screen_object = ScreenObjectBundle::new(
-        Circle::new(Self::RADIUS),
-        Color::hsl(0.0, 0.95, 0.7),
-        10.,
-        world,
-      );
       world.spawn(Self {
-        screen_object,
+        sprite,
+        transform: Transform::from_scale(Vec3::splat(Self::WIDTH / Self::IMG_WIDTH)),
         pos: Position(Vec2::ZERO),
         player: Player,
       });
@@ -87,13 +93,13 @@ impl PlayerPlugin {
       position.0.x = position
         .0
         .x
-        .min(win_info.width / 2. - PlayerBundle::RADIUS)
-        .max(-(win_info.width / 2. - PlayerBundle::RADIUS));
+        .min(win_info.width / 2. - PlayerBundle::WIDTH / 2.)
+        .max(-(win_info.width / 2. - PlayerBundle::WIDTH / 2.));
       position.0.y = position
         .0
         .y
-        .min(win_info.height / 2. - PlayerBundle::RADIUS)
-        .max(-(win_info.height / 2. - PlayerBundle::RADIUS));
+        .min(win_info.height / 2. - PlayerBundle::WIDTH / 2.)
+        .max(-(win_info.height / 2. - PlayerBundle::WIDTH / 2.));
     }
   }
 
@@ -105,7 +111,7 @@ impl PlayerPlugin {
     for (Position(rain_pos), mut rain_vel) in &mut rain_query {
       let diff = rain_pos - player_pos;
       let dist2 = diff.length_squared();
-      if dist2 < (PlayerBundle::RADIUS + RainBundle::RADIUS).squared() {
+      if diff.y >= 0. && dist2 < (PlayerBundle::WIDTH / 2. + RainBundle::RADIUS).squared() {
         let relative_vel = rain_vel.delta - player_vel.delta;
 
         let diff = diff.normalize();
