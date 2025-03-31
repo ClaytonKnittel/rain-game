@@ -108,7 +108,7 @@ impl RainPlugin {
 
   fn rotate_raindrops(mut query: Query<(&MoveComponent, &mut Transform), With<Rain>>) {
     for (movement, mut transform) in &mut query {
-      let delta = movement.delta.try_normalize().unwrap_or(Vec2::Y);
+      let delta = movement.delta.try_normalize().unwrap_or(-Vec2::Y);
       let angle = atan2(delta.x, -delta.y);
       *transform = transform.with_rotation(Quat::from_rotation_z(angle));
     }
