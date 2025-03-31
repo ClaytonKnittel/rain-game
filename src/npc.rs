@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use bevy::{
   app::{App, FixedUpdate, Plugin, Startup, Update},
   asset::{AssetServer, Handle},
@@ -12,6 +14,7 @@ use bevy::{
   image::Image,
   math::{primitives::Rectangle, FloatPow, Vec2, Vec3},
   sprite::Sprite,
+  time::{Time, Timer, TimerMode},
   transform::components::Transform,
 };
 
@@ -55,14 +58,24 @@ impl Wetness {
   }
 }
 
-#[derive(Component, Default)]
+#[derive(Component)]
 #[require(MoveComponent, Transform)]
 struct Npc {
   wetness: Wetness,
+  animation_idx: usize,
+  timer: Timer,
 }
 
 impl Npc {
   const WALK_SPEED: f32 = 20.;
+
+  fn new(timeout: Duration) -> Self {
+    Self {
+      wetness: Wetness::Dry,
+      animation_idx: 0,
+      timer: Timer::new(timeout, TimerMode::Repeating),
+    }
+  }
 }
 
 #[derive(Bundle)]
@@ -90,7 +103,7 @@ impl NpcBundle {
   fn spawn(mut commands: Commands, pos: Position, image: Handle<Image>) {
     commands.spawn(NpcBundle {
       sprite: Sprite::from_image(image),
-      npc: Npc::default(),
+      npc: Npc::new(Duration::from_millis(250)),
       transform: Transform::from_scale(Vec3::splat(Self::WIDTH / Self::BOY_WIDTH)),
       pos,
     });
@@ -99,7 +112,7 @@ impl NpcBundle {
 
 #[derive(Resource)]
 struct NpcAssets {
-  boy_sprites: [Handle<Image>; 3],
+  boy_sprites: [Handle<Image>; 4],
   wet_boy_sprite: Handle<Image>,
 }
 
@@ -109,7 +122,7 @@ impl NpcPlugin {
   const SIGHT_DIST: f32 = 200.;
 
   fn initialize_plugin(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let boy_sprites = [1, 2, 3].map(|idx| asset_server.load(format!("boy/boy_{idx}_right.png")));
+    let boy_sprites = [1, 2, 3, 2].map(|idx| asset_server.load(format!("boy/boy_{idx}_right.png")));
     let wet_boy_sprite = asset_server.load("boy/boy_wet.png");
 
     commands.insert_resource(NpcAssets { boy_sprites, wet_boy_sprite });
@@ -179,12 +192,20 @@ impl NpcPlugin {
     }
   }
 
-  fn set_npc_wetness(npc_assets: Res<NpcAssets>, mut query: Query<(&mut Sprite, &Npc)>) {
-    for (mut sprite, npc) in &mut query {
+  fn set_npc_wetness(
+    time: Res<Time>,
+    npc_assets: Res<NpcAssets>,
+    mut query: Query<(&mut Sprite, &mut Npc)>,
+  ) {
+    for (mut sprite, mut npc) in &mut query {
       if npc.wetness.is_wet() {
         sprite.image = npc_assets.wet_boy_sprite.clone_weak();
       } else {
-        sprite.image = npc_assets.boy_sprites[0].clone_weak();
+        npc.timer.tick(time.delta());
+        if npc.timer.just_finished() {
+          npc.animation_idx = (npc.animation_idx + 1) % npc_assets.boy_sprites.len();
+        }
+        sprite.image = npc_assets.boy_sprites[npc.animation_idx].clone_weak();
       }
     }
   }
