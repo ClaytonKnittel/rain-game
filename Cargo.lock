@@ -2201,6 +2201,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "googletest"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fbbb8bea2ac2741b1d5e1183896ad6a3f1e8e25e375ed5737a171e057cacd8a3"
+dependencies = [
+ "googletest_macro",
+ "num-traits",
+ "regex",
+ "rustversion",
+]
+
+[[package]]
+name = "googletest_macro"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "672de67b4529abeb5c623913ca6de8a3031ab97dc105c58ab747199b084ab1bf"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "gpu-alloc"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3302,6 +3325,7 @@ name = "rain-game"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "googletest",
  "rand 0.9.0",
 ]
 
