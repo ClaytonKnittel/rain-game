@@ -9,7 +9,7 @@ use bevy::{
     entity::Entity,
     query::With,
     schedule::IntoSystemConfigs,
-    system::{Commands, Query, Res, Resource},
+    system::{Commands, Query, Res, ResMut, Resource},
   },
   image::Image,
   math::{primitives::Rectangle, FloatPow, Vec2, Vec3},
@@ -17,6 +17,7 @@ use bevy::{
   time::{Time, Timer, TimerMode},
   transform::components::Transform,
 };
+use rand::Rng;
 
 use crate::{
   movable::MoveComponent,
@@ -40,6 +41,16 @@ impl Character {
       Self::Nun => 1,
       Self::OldMan => npc_assets.old_man_sprites.len(),
       Self::SchoolGirl => npc_assets.school_girl_sprites.len(),
+    }
+  }
+
+  fn random_character() -> Self {
+    match rand::rng().random_range(0..4) {
+      0 => Self::Boy,
+      1 => Self::Nun,
+      2 => Self::OldMan,
+      3 => Self::SchoolGirl,
+      _ => unreachable!(),
     }
   }
 }
@@ -98,13 +109,8 @@ impl Npc {
     }
   }
 
-  fn tick(&mut self, duration: Duration, npc_assets: &NpcAssets, sprite: &mut Sprite) {
-    self.timer.tick(duration);
-    if self.timer.just_finished() {
-      self.animation_idx = (self.animation_idx + 1) % self.character.num_states(npc_assets);
-    }
-
-    sprite.image = if self.wetness.is_wet() {
+  fn current_asset(&self, npc_assets: &NpcAssets) -> Handle<Image> {
+    if self.wetness.is_wet() {
       match self.character {
         Character::Boy => npc_assets.wet_boy_sprite.clone_weak(),
         Character::Nun => npc_assets.wet_nun_sprite.clone_weak(),
@@ -119,6 +125,15 @@ impl Npc {
         Character::SchoolGirl => npc_assets.school_girl_sprites[self.animation_idx].clone_weak(),
       }
     }
+  }
+
+  fn tick(&mut self, duration: Duration, npc_assets: &NpcAssets, sprite: &mut Sprite) {
+    self.timer.tick(duration);
+    if self.timer.just_finished() {
+      self.animation_idx = (self.animation_idx + 1) % self.character.num_states(npc_assets);
+    }
+
+    sprite.image = self.current_asset(npc_assets);
   }
 }
 
@@ -144,10 +159,11 @@ impl NpcBundle {
     Rectangle::new(Self::WIDTH, Self::HEIGHT)
   }
 
-  fn spawn(mut commands: Commands, character: Character, pos: Position, image: Handle<Image>) {
+  fn spawn(mut commands: Commands, character: Character, pos: Position, npc_assets: &NpcAssets) {
+    let npc = Npc::new(character);
     commands.spawn(NpcBundle {
-      sprite: Sprite::from_image(image),
-      npc: Npc::new(character),
+      sprite: Sprite::from_image(npc.current_asset(npc_assets)),
+      npc,
       transform: Transform::from_scale(Vec3::splat(Self::WIDTH / Self::BOY_WIDTH)),
       pos,
     });
@@ -164,6 +180,21 @@ struct NpcAssets {
   wet_old_man_sprite: Handle<Image>,
   school_girl_sprites: [Handle<Image>; 2],
   wet_school_girl_sprite: Handle<Image>,
+}
+
+#[derive(Resource)]
+struct NpcPluginState {
+  spawn_timer: Timer,
+}
+
+impl NpcPluginState {
+  const NPC_SPAWN_TIMER: Duration = Duration::from_secs(5);
+
+  fn new() -> Self {
+    Self {
+      spawn_timer: Timer::new(Self::NPC_SPAWN_TIMER, TimerMode::Repeating),
+    }
+  }
 }
 
 pub struct NpcPlugin;
@@ -194,19 +225,30 @@ impl NpcPlugin {
       school_girl_sprites,
       wet_school_girl_sprite,
     });
+    commands.insert_resource(NpcPluginState::new());
   }
 
-  fn spawn_npc(commands: Commands, npc_assets: Res<NpcAssets>, win_info: Res<WinInfo>) {
-    let height = -win_info.height / 4.;
-    NpcBundle::spawn(
-      commands,
-      Character::Boy,
-      Position(Vec2::new(
-        -win_info.width / 2. - NpcBundle::WIDTH / 2.,
-        height,
-      )),
-      npc_assets.boy_sprites[0].clone_weak(),
-    );
+  fn spawn_npcs(
+    commands: Commands,
+    time: Res<Time>,
+    mut state: ResMut<NpcPluginState>,
+    npc_assets: Res<NpcAssets>,
+    win_info: Res<WinInfo>,
+  ) {
+    state.spawn_timer.tick(time.delta());
+
+    if state.spawn_timer.just_finished() {
+      let height = -win_info.height / 4.;
+      NpcBundle::spawn(
+        commands,
+        Character::random_character(),
+        Position(Vec2::new(
+          -win_info.width / 2. - NpcBundle::WIDTH / 2.,
+          height,
+        )),
+        &npc_assets,
+      );
+    }
   }
 
   fn control_npcs(
@@ -244,11 +286,9 @@ impl Plugin for NpcPlugin {
     app
       .add_systems(
         Startup,
-        (Self::initialize_plugin, Self::spawn_npc)
-          .chain()
-          .after(WorldInitPlugin::world_init),
+        Self::initialize_plugin.after(WorldInitPlugin::world_init),
       )
-      .add_systems(FixedUpdate, Self::control_npcs)
+      .add_systems(FixedUpdate, (Self::control_npcs, Self::spawn_npcs))
       .add_systems(Update, Self::set_npc_wetness);
   }
 }
