@@ -280,16 +280,19 @@ impl NpcPlugin {
 
   fn control_npcs(
     mut commands: Commands,
+    win_info: Res<WinInfo>,
     mut npc_query: Query<(&mut Npc, &Position, &mut MoveComponent)>,
     rain_query: Query<(Entity, &Position), With<Rain>>,
   ) {
     for (mut npc, &Position(npc_pos), mut npc_vel) in &mut npc_query {
-      for (rain_entity, rain_pos) in &rain_query {
-        let dist = rain_pos.0 - npc_pos;
-        let closest_point = NpcBundle::bounding_rect().closest_point(dist);
-        if (closest_point - dist).length_squared() < RainBundle::RADIUS.squared() {
-          npc.state.absorb_rain();
-          commands.entity(rain_entity).despawn();
+      if npc_pos.x > -win_info.width / 2. + NpcBundle::WIDTH / 2. {
+        for (rain_entity, rain_pos) in &rain_query {
+          let dist = rain_pos.0 - npc_pos;
+          let closest_point = NpcBundle::bounding_rect().closest_point(dist);
+          if (closest_point - dist).length_squared() < RainBundle::RADIUS.squared() {
+            npc.state.absorb_rain();
+            commands.entity(rain_entity).despawn();
+          }
         }
       }
 
