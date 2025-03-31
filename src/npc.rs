@@ -56,34 +56,47 @@ impl Character {
 }
 
 #[derive(Default)]
-enum Wetness {
+enum State {
   #[default]
   Dry,
   Wet {
-    level: u8,
+    timer: Timer,
   },
-  Soaked,
 }
 
-impl Wetness {
-  const MAX_WETNESS: u8 = 3;
+impl State {
+  const ANGRY_DURATION: Duration = Duration::from_secs(2);
 
   fn absorb_rain(&mut self) {
     match self {
-      Self::Dry => *self = Self::Wet { level: 1 },
-      Self::Wet { level } => {
-        if *level == Self::MAX_WETNESS {
-          *self = Self::Soaked;
-        } else {
-          *self = Self::Wet { level: *level + 1 };
+      Self::Dry => {
+        *self = Self::Wet {
+          timer: Timer::new(Self::ANGRY_DURATION, TimerMode::Once),
         }
       }
-      Self::Soaked => {}
+      Self::Wet { .. } => {}
     }
   }
 
   fn is_wet(&self) -> bool {
-    !matches!(self, Wetness::Dry)
+    !matches!(self, State::Dry)
+  }
+
+  fn tick(&mut self, delta: Duration) {
+    match self {
+      Self::Dry => {}
+      Self::Wet { timer } => {
+        timer.tick(delta);
+      }
+    }
+  }
+
+  fn should_despawn(&self) -> bool {
+    if let Self::Wet { timer } = self {
+      timer.just_finished()
+    } else {
+      false
+    }
   }
 }
 
@@ -91,7 +104,7 @@ impl Wetness {
 #[require(MoveComponent, Transform)]
 struct Npc {
   character: Character,
-  wetness: Wetness,
+  state: State,
   animation_idx: usize,
   timer: Timer,
 }
@@ -103,14 +116,14 @@ impl Npc {
   fn new(character: Character) -> Self {
     Self {
       character,
-      wetness: Wetness::Dry,
+      state: State::Dry,
       animation_idx: 0,
       timer: Timer::new(Self::ANIMATION_PERIOD, TimerMode::Repeating),
     }
   }
 
   fn current_asset(&self, npc_assets: &NpcAssets) -> Handle<Image> {
-    if self.wetness.is_wet() {
+    if self.state.is_wet() {
       match self.character {
         Character::Boy => npc_assets.wet_boy_sprite.clone_weak(),
         Character::Nun => npc_assets.wet_nun_sprite.clone_weak(),
@@ -127,11 +140,13 @@ impl Npc {
     }
   }
 
-  fn tick(&mut self, duration: Duration, npc_assets: &NpcAssets, sprite: &mut Sprite) {
-    self.timer.tick(duration);
+  fn tick(&mut self, delta: Duration, npc_assets: &NpcAssets, sprite: &mut Sprite) {
+    self.timer.tick(delta);
     if self.timer.just_finished() {
       self.animation_idx = (self.animation_idx + 1) % self.character.num_states(npc_assets);
     }
+
+    self.state.tick(delta);
 
     sprite.image = self.current_asset(npc_assets);
   }
@@ -257,26 +272,35 @@ impl NpcPlugin {
     rain_query: Query<(Entity, &Position), With<Rain>>,
   ) {
     for (mut npc, &Position(npc_pos), mut npc_vel) in &mut npc_query {
-      npc_vel.delta = Npc::WALK_SPEED * Vec2::X;
-
       for (rain_entity, rain_pos) in &rain_query {
         let dist = rain_pos.0 - npc_pos;
         let closest_point = NpcBundle::bounding_rect().closest_point(dist);
         if (closest_point - dist).length_squared() < RainBundle::RADIUS.squared() {
-          npc.wetness.absorb_rain();
+          npc.state.absorb_rain();
           commands.entity(rain_entity).despawn();
         }
+      }
+
+      if !npc.state.is_wet() {
+        npc_vel.delta = Npc::WALK_SPEED * Vec2::X;
+      } else {
+        npc_vel.delta = Vec2::ZERO;
       }
     }
   }
 
-  fn set_npc_wetness(
+  fn npc_tick(
+    mut commands: Commands,
     time: Res<Time>,
     npc_assets: Res<NpcAssets>,
-    mut query: Query<(&mut Sprite, &mut Npc)>,
+    mut query: Query<(Entity, &mut Sprite, &mut Npc)>,
   ) {
-    for (mut sprite, mut npc) in &mut query {
+    for (entity, mut sprite, mut npc) in &mut query {
       npc.tick(time.delta(), &npc_assets, &mut sprite);
+
+      if npc.state.should_despawn() {
+        commands.entity(entity).despawn();
+      }
     }
   }
 }
@@ -289,6 +313,6 @@ impl Plugin for NpcPlugin {
         Self::initialize_plugin.after(WorldInitPlugin::world_init),
       )
       .add_systems(FixedUpdate, (Self::control_npcs, Self::spawn_npcs))
-      .add_systems(Update, Self::set_npc_wetness);
+      .add_systems(Update, Self::npc_tick);
   }
 }
