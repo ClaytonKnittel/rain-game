@@ -32,6 +32,7 @@ enum Character {
   Nun,
   OldMan,
   SchoolGirl,
+  Baker,
 }
 
 impl Character {
@@ -41,15 +42,17 @@ impl Character {
       Self::Nun => 1,
       Self::OldMan => npc_assets.old_man_sprites.len(),
       Self::SchoolGirl => npc_assets.school_girl_sprites.len(),
+      Self::Baker => npc_assets.baker_sprites.len(),
     }
   }
 
   fn random_character() -> Self {
-    match rand::rng().random_range(0..4) {
+    match rand::rng().random_range(0..5) {
       0 => Self::Boy,
       1 => Self::Nun,
       2 => Self::OldMan,
       3 => Self::SchoolGirl,
+      4 => Self::Baker,
       _ => unreachable!(),
     }
   }
@@ -129,6 +132,7 @@ impl Npc {
         Character::Nun => npc_assets.wet_nun_sprite.clone_weak(),
         Character::OldMan => npc_assets.wet_old_man_sprite.clone_weak(),
         Character::SchoolGirl => npc_assets.wet_school_girl_sprite.clone_weak(),
+        Character::Baker => npc_assets.wet_baker_sprite.clone_weak(),
       }
     } else {
       match self.character {
@@ -136,6 +140,7 @@ impl Npc {
         Character::Nun => npc_assets.nun_sprite.clone_weak(),
         Character::OldMan => npc_assets.old_man_sprites[self.animation_idx].clone_weak(),
         Character::SchoolGirl => npc_assets.school_girl_sprites[self.animation_idx].clone_weak(),
+        Character::Baker => npc_assets.baker_sprites[self.animation_idx].clone_weak(),
       }
     }
   }
@@ -195,6 +200,8 @@ struct NpcAssets {
   wet_old_man_sprite: Handle<Image>,
   school_girl_sprites: [Handle<Image>; 2],
   wet_school_girl_sprite: Handle<Image>,
+  baker_sprites: [Handle<Image>; 2],
+  wet_baker_sprite: Handle<Image>,
 }
 
 #[derive(Resource)]
@@ -230,6 +237,9 @@ impl NpcPlugin {
       [1, 2].map(|idx| asset_server.load(format!("school_girl/school_girl_{idx}_right.png")));
     let wet_school_girl_sprite = asset_server.load("school_girl/school_girl_wet.png");
 
+    let baker_sprites = [1, 2].map(|idx| asset_server.load(format!("baker/baker_{idx}.png")));
+    let wet_baker_sprite = asset_server.load("baker/wet_baker.png");
+
     commands.insert_resource(NpcAssets {
       boy_sprites,
       wet_boy_sprite,
@@ -239,6 +249,8 @@ impl NpcPlugin {
       wet_old_man_sprite,
       school_girl_sprites,
       wet_school_girl_sprite,
+      baker_sprites,
+      wet_baker_sprite,
     });
     commands.insert_resource(NpcPluginState::new());
   }
