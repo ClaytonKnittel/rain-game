@@ -119,8 +119,6 @@ struct NpcAssets {
 pub struct NpcPlugin;
 
 impl NpcPlugin {
-  const SIGHT_DIST: f32 = 200.;
-
   fn initialize_plugin(mut commands: Commands, asset_server: Res<AssetServer>) {
     let boy_sprites = [1, 2, 3, 2].map(|idx| asset_server.load(format!("boy/boy_{idx}_right.png")));
     let wet_boy_sprite = asset_server.load("boy/boy_wet.png");
@@ -140,32 +138,6 @@ impl NpcPlugin {
     );
   }
 
-  fn find_nearest_visible_rain_pos(
-    npc_pos: Vec2,
-    rain: impl IntoIterator<Item = (Entity, Vec2)>,
-  ) -> Option<(Entity, Vec2)> {
-    rain
-      .into_iter()
-      .fold(None, |nearest_rain, (entity, rain_pos)| {
-        let dist = (rain_pos - npc_pos).length_squared();
-        if dist < Self::SIGHT_DIST.squared() {
-          Some(
-            nearest_rain
-              .map(|(nearest_entity, nearest_rain_pos)| {
-                if dist < (nearest_rain_pos - npc_pos).length_squared() {
-                  (entity, rain_pos)
-                } else {
-                  (nearest_entity, nearest_rain_pos)
-                }
-              })
-              .unwrap_or((entity, rain_pos)),
-          )
-        } else {
-          nearest_rain
-        }
-      })
-  }
-
   fn control_npcs(
     mut commands: Commands,
     mut npc_query: Query<(&mut Npc, &Position, &mut MoveComponent)>,
@@ -174,15 +146,8 @@ impl NpcPlugin {
     for (mut npc, &Position(npc_pos), mut npc_vel) in &mut npc_query {
       npc_vel.delta = Npc::WALK_SPEED * Vec2::X;
 
-      let nearest_rain = Self::find_nearest_visible_rain_pos(
-        npc_pos,
-        rain_query
-          .iter()
-          .map(|(entity, rain_pos)| (entity, rain_pos.0)),
-      );
-
-      if let Some((rain_entity, nearest_rain)) = nearest_rain {
-        let dist = nearest_rain - npc_pos;
+      for (rain_entity, rain_pos) in &rain_query {
+        let dist = rain_pos.0 - npc_pos;
         let closest_point = NpcBundle::bounding_rect().closest_point(dist);
         if (closest_point - dist).length_squared() < RainBundle::RADIUS.squared() {
           npc.wetness.absorb_rain();

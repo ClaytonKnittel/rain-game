@@ -135,7 +135,10 @@ impl Plugin for PlayerPlugin {
         FixedUpdate,
         Self::move_player.before(MovePlugin::apply_moves),
       )
-      .add_systems(FixedUpdate, Self::snap_in_bounds)
+      .add_systems(
+        FixedUpdate,
+        Self::snap_in_bounds.after(MovePlugin::apply_moves),
+      )
       .add_systems(
         FixedUpdate,
         Self::handle_rain_collisions.before(MovePlugin::apply_moves),
