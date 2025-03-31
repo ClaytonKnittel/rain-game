@@ -26,6 +26,24 @@ use crate::{
   world_init::WorldInitPlugin,
 };
 
+enum Character {
+  Boy,
+  Nun,
+  OldMan,
+  SchoolGirl,
+}
+
+impl Character {
+  const fn num_states(&self, npc_assets: &NpcAssets) -> usize {
+    match self {
+      Self::Boy => npc_assets.boy_sprites.len(),
+      Self::Nun => 1,
+      Self::OldMan => npc_assets.old_man_sprites.len(),
+      Self::SchoolGirl => npc_assets.school_girl_sprites.len(),
+    }
+  }
+}
+
 #[derive(Default)]
 enum Wetness {
   #[default]
@@ -61,6 +79,7 @@ impl Wetness {
 #[derive(Component)]
 #[require(MoveComponent, Transform)]
 struct Npc {
+  character: Character,
   wetness: Wetness,
   animation_idx: usize,
   timer: Timer,
@@ -68,12 +87,37 @@ struct Npc {
 
 impl Npc {
   const WALK_SPEED: f32 = 20.;
+  const ANIMATION_PERIOD: Duration = Duration::from_millis(250);
 
-  fn new(timeout: Duration) -> Self {
+  fn new(character: Character) -> Self {
     Self {
+      character,
       wetness: Wetness::Dry,
       animation_idx: 0,
-      timer: Timer::new(timeout, TimerMode::Repeating),
+      timer: Timer::new(Self::ANIMATION_PERIOD, TimerMode::Repeating),
+    }
+  }
+
+  fn tick(&mut self, duration: Duration, npc_assets: &NpcAssets, sprite: &mut Sprite) {
+    self.timer.tick(duration);
+    if self.timer.just_finished() {
+      self.animation_idx = (self.animation_idx + 1) % self.character.num_states(npc_assets);
+    }
+
+    sprite.image = if self.wetness.is_wet() {
+      match self.character {
+        Character::Boy => npc_assets.wet_boy_sprite.clone_weak(),
+        Character::Nun => npc_assets.wet_nun_sprite.clone_weak(),
+        Character::OldMan => npc_assets.wet_old_man_sprite.clone_weak(),
+        Character::SchoolGirl => npc_assets.wet_school_girl_sprite.clone_weak(),
+      }
+    } else {
+      match self.character {
+        Character::Boy => npc_assets.boy_sprites[self.animation_idx].clone_weak(),
+        Character::Nun => npc_assets.nun_sprite.clone_weak(),
+        Character::OldMan => npc_assets.old_man_sprites[self.animation_idx].clone_weak(),
+        Character::SchoolGirl => npc_assets.school_girl_sprites[self.animation_idx].clone_weak(),
+      }
     }
   }
 }
@@ -100,10 +144,10 @@ impl NpcBundle {
     Rectangle::new(Self::WIDTH, Self::HEIGHT)
   }
 
-  fn spawn(mut commands: Commands, pos: Position, image: Handle<Image>) {
+  fn spawn(mut commands: Commands, character: Character, pos: Position, image: Handle<Image>) {
     commands.spawn(NpcBundle {
       sprite: Sprite::from_image(image),
-      npc: Npc::new(Duration::from_millis(250)),
+      npc: Npc::new(character),
       transform: Transform::from_scale(Vec3::splat(Self::WIDTH / Self::BOY_WIDTH)),
       pos,
     });
@@ -114,6 +158,12 @@ impl NpcBundle {
 struct NpcAssets {
   boy_sprites: [Handle<Image>; 4],
   wet_boy_sprite: Handle<Image>,
+  nun_sprite: Handle<Image>,
+  wet_nun_sprite: Handle<Image>,
+  old_man_sprites: [Handle<Image>; 2],
+  wet_old_man_sprite: Handle<Image>,
+  school_girl_sprites: [Handle<Image>; 2],
+  wet_school_girl_sprite: Handle<Image>,
 }
 
 pub struct NpcPlugin;
@@ -123,13 +173,34 @@ impl NpcPlugin {
     let boy_sprites = [1, 2, 3, 2].map(|idx| asset_server.load(format!("boy/boy_{idx}_right.png")));
     let wet_boy_sprite = asset_server.load("boy/boy_wet.png");
 
-    commands.insert_resource(NpcAssets { boy_sprites, wet_boy_sprite });
+    let nun_sprite = asset_server.load("nun/nun_right.png");
+    let wet_nun_sprite = asset_server.load("nun/nun_wet.png");
+
+    let old_man_sprites =
+      [1, 2].map(|idx| asset_server.load(format!("old_man/old_man_{idx}_right.png")));
+    let wet_old_man_sprite = asset_server.load("old_man/old_man_wet.png");
+
+    let school_girl_sprites =
+      [1, 2].map(|idx| asset_server.load(format!("school_girl/school_girl_{idx}_right.png")));
+    let wet_school_girl_sprite = asset_server.load("school_girl/school_girl_wet.png");
+
+    commands.insert_resource(NpcAssets {
+      boy_sprites,
+      wet_boy_sprite,
+      nun_sprite,
+      wet_nun_sprite,
+      old_man_sprites,
+      wet_old_man_sprite,
+      school_girl_sprites,
+      wet_school_girl_sprite,
+    });
   }
 
   fn spawn_npc(commands: Commands, npc_assets: Res<NpcAssets>, win_info: Res<WinInfo>) {
     let height = -win_info.height / 4.;
     NpcBundle::spawn(
       commands,
+      Character::Boy,
       Position(Vec2::new(
         -win_info.width / 2. - NpcBundle::WIDTH / 2.,
         height,
@@ -163,15 +234,7 @@ impl NpcPlugin {
     mut query: Query<(&mut Sprite, &mut Npc)>,
   ) {
     for (mut sprite, mut npc) in &mut query {
-      if npc.wetness.is_wet() {
-        sprite.image = npc_assets.wet_boy_sprite.clone_weak();
-      } else {
-        npc.timer.tick(time.delta());
-        if npc.timer.just_finished() {
-          npc.animation_idx = (npc.animation_idx + 1) % npc_assets.boy_sprites.len();
-        }
-        sprite.image = npc_assets.boy_sprites[npc.animation_idx].clone_weak();
-      }
+      npc.tick(time.delta(), &npc_assets, &mut sprite);
     }
   }
 }
