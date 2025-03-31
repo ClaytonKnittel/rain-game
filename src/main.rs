@@ -7,6 +7,7 @@ mod npc;
 mod player;
 mod position;
 mod rain;
+mod shack;
 mod win_info;
 mod world_init;
 
@@ -18,6 +19,7 @@ use npc::NpcPlugin;
 use player::PlayerPlugin;
 use position::PositionPlugin;
 use rain::RainPlugin;
+use shack::ShackPlugin;
 use world_init::WorldInitPlugin;
 
 fn main() {
@@ -25,7 +27,7 @@ fn main() {
     .add_plugins(DefaultPlugins)
     .add_plugins(FrameratePlugin)
     .add_plugins(WorldInitPlugin)
-    .add_plugins((PlayerPlugin, RainPlugin, NpcPlugin))
+    .add_plugins((PlayerPlugin, RainPlugin, NpcPlugin, ShackPlugin))
     .add_plugins((PositionPlugin, MovePlugin, GravityPlugin))
     .run();
 }
