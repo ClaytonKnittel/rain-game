@@ -1,5 +1,5 @@
 use bevy::{
-  app::{FixedUpdate, Plugin, Startup},
+  app::{App, FixedUpdate, Plugin, Startup},
   asset::Assets,
   color::Color,
   ecs::{
@@ -38,6 +38,8 @@ impl ShackPlugin {
   const WIDTH: f32 = 150.;
   const HEIGHT: f32 = 240.;
 
+  const RAIN_RESTITUTION: f32 = 0.3;
+
   fn spawn_shack(
     mut commands: Commands,
     win_info: Res<WinInfo>,
@@ -62,16 +64,26 @@ impl ShackPlugin {
     let Position(shack_pos) = shack.into_inner();
     for (Position(rain_pos), mut rain_vel) in &mut rain_query {
       let diff = rain_pos - shack_pos;
-      if diff.x.abs() <= Self::WIDTH / 2. && rain_vel.delta.y < 0. && diff.y <= Self::HEIGHT / 2. {
-        rain_vel.delta.y = -rain_vel.delta.y * 0.3;
-        rain_vel.delta.x += 1.;
+
+      let tl_corner = shack_pos + Vec2::new(-Self::WIDTH / 2., Self::HEIGHT / 2.);
+      let from_tl_corner = rain_pos - tl_corner;
+
+      if diff.x.abs() <= Self::WIDTH / 2. && diff.y.abs() <= Self::HEIGHT / 2. {
+        if from_tl_corner.y < -from_tl_corner.x {
+          if rain_vel.delta.x > 0. {
+            rain_vel.delta.x = -rain_vel.delta.x * Self::RAIN_RESTITUTION;
+          }
+        } else if rain_vel.delta.y < 0. {
+          rain_vel.delta.y = -rain_vel.delta.y * Self::RAIN_RESTITUTION;
+          rain_vel.delta.x += 1.;
+        }
       }
     }
   }
 }
 
 impl Plugin for ShackPlugin {
-  fn build(&self, app: &mut bevy::app::App) {
+  fn build(&self, app: &mut App) {
     app
       .add_systems(
         Startup,
