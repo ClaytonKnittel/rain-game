@@ -1,26 +1,24 @@
 use bevy::{
   app::{App, FixedUpdate, Plugin, Startup, Update},
-  color::Color,
+  asset::{AssetServer, Handle},
   ecs::{
     bundle::Bundle,
     component::Component,
     entity::Entity,
     query::With,
     schedule::IntoSystemConfigs,
-    system::{Commands, Query, Res},
-    world::World,
+    system::{Commands, Query, Res, Resource},
   },
-  hierarchy::{BuildChildren, ChildBuild, Parent},
-  math::{primitives::Rectangle, FloatPow, Vec2},
+  image::Image,
+  math::{primitives::Rectangle, FloatPow, Vec2, Vec3},
+  sprite::Sprite,
   transform::components::Transform,
 };
 
 use crate::{
-  color::{ColorComponent, StrictColor},
   movable::MoveComponent,
   position::Position,
   rain::{Rain, RainBundle},
-  screen_object::ScreenObjectBundle,
   win_info::WinInfo,
   world_init::WorldInitPlugin,
 };
@@ -52,15 +50,8 @@ impl Wetness {
     }
   }
 
-  fn color(&self) -> StrictColor {
-    match self {
-      Self::Dry => StrictColor::new(0xEB, 0xBF, 0x6E),
-      Self::Wet { level: 1 } => StrictColor::new(0xEB, 0xAD, 0x6E),
-      Self::Wet { level: 2 } => StrictColor::new(0xEB, 0x96, 0x6D),
-      Self::Wet { level: 3 } => StrictColor::new(0xEB, 0x80, 0x6C),
-      Self::Soaked => StrictColor::new(0xEB, 0x6C, 0x73),
-      _ => unreachable!(),
-    }
+  fn is_wet(&self) -> bool {
+    !matches!(self, Wetness::Dry)
   }
 }
 
@@ -76,73 +67,40 @@ impl Npc {
 
 #[derive(Bundle)]
 struct NpcBundle {
+  sprite: Sprite,
   npc: Npc,
-  pos: Position,
-}
-
-#[derive(Component)]
-struct NpcBody;
-
-#[derive(Bundle)]
-struct NpcBodyBundle {
-  screen_object: ScreenObjectBundle,
-  npc_body: NpcBody,
-  pos: Position,
-}
-
-#[derive(Component)]
-struct NpcEye;
-
-#[derive(Bundle)]
-struct NpcEyeBundle {
-  screen_object: ScreenObjectBundle,
-  npc_eye: NpcEye,
+  transform: Transform,
   pos: Position,
 }
 
 impl NpcBundle {
-  const WIDTH: f32 = 50.;
-  const HEIGHT: f32 = 80.;
+  // const BOY_WIDTH: f32 = 750.;
+  // const BOY_HEIGHT: f32 = 1250.;
+  const BOY_WIDTH: f32 = 589.;
+  const BOY_HEIGHT: f32 = 656.;
+  const ASPECT_RATIO: f32 = Self::BOY_HEIGHT / Self::BOY_WIDTH;
+
+  const WIDTH: f32 = 60.;
+  const HEIGHT: f32 = Self::WIDTH * Self::ASPECT_RATIO;
 
   fn bounding_rect() -> Rectangle {
     Rectangle::new(Self::WIDTH, Self::HEIGHT)
   }
 
-  fn spawn(mut commands: Commands, pos: Position) {
-    commands.queue(|world: &mut World| {
-      let body_screen_object = ScreenObjectBundle::new(
-        Self::bounding_rect(),
-        Color::srgb(0.8, 0.7, 0.6),
-        1.0,
-        world,
-      );
-      let eye_screen_object = ScreenObjectBundle::new(
-        Rectangle::new(Self::WIDTH / 4., Self::WIDTH / 4.),
-        Color::srgb(0.1, 0.4, 0.4),
-        2.0,
-        world,
-      );
-
-      world
-        .spawn(Self { npc: Npc::default(), pos })
-        .with_children(move |parent| {
-          parent.spawn(NpcBodyBundle {
-            screen_object: body_screen_object,
-            npc_body: NpcBody,
-            pos: Position(Vec2::ZERO),
-          });
-
-          parent.spawn(NpcEyeBundle {
-            screen_object: eye_screen_object,
-            npc_eye: NpcEye,
-            pos: Position(Vec2 {
-              x: Self::WIDTH / 4.,
-              y: Self::HEIGHT * 0.4,
-            }),
-          });
-        });
+  fn spawn(mut commands: Commands, pos: Position, image: Handle<Image>) {
+    commands.spawn(NpcBundle {
+      sprite: Sprite::from_image(image),
+      npc: Npc::default(),
+      transform: Transform::from_scale(Vec3::splat(Self::WIDTH / Self::BOY_WIDTH)),
+      pos,
     });
   }
+}
+
+#[derive(Resource)]
+struct NpcAssets {
+  boy_sprites: [Handle<Image>; 3],
+  wet_boy_sprite: Handle<Image>,
 }
 
 pub struct NpcPlugin;
@@ -150,7 +108,14 @@ pub struct NpcPlugin;
 impl NpcPlugin {
   const SIGHT_DIST: f32 = 200.;
 
-  fn spawn_npc(commands: Commands, win_info: Res<WinInfo>) {
+  fn initialize_plugin(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let boy_sprites = [1, 2, 3].map(|idx| asset_server.load(format!("boy/boy_{idx}_right.png")));
+    let wet_boy_sprite = asset_server.load("boy/boy_wet.png");
+
+    commands.insert_resource(NpcAssets { boy_sprites, wet_boy_sprite });
+  }
+
+  fn spawn_npc(commands: Commands, npc_assets: Res<NpcAssets>, win_info: Res<WinInfo>) {
     let height = -win_info.height / 4.;
     NpcBundle::spawn(
       commands,
@@ -158,6 +123,7 @@ impl NpcPlugin {
         -win_info.width / 2. - NpcBundle::WIDTH / 2.,
         height,
       )),
+      npc_assets.boy_sprites[0].clone_weak(),
     );
   }
 
@@ -213,15 +179,13 @@ impl NpcPlugin {
     }
   }
 
-  fn set_npc_colors(
-    npc_query: Query<&Npc>,
-    mut eye_query: Query<(&mut ColorComponent, &Parent), With<NpcBody>>,
-  ) {
-    for (mut body_color, parent) in &mut eye_query {
-      let npc = npc_query.get(parent.get()).unwrap();
-      let color = npc.wetness.color();
-
-      body_color.set_color(color);
+  fn set_npc_wetness(npc_assets: Res<NpcAssets>, mut query: Query<(&mut Sprite, &Npc)>) {
+    for (mut sprite, npc) in &mut query {
+      if npc.wetness.is_wet() {
+        sprite.image = npc_assets.wet_boy_sprite.clone_weak();
+      } else {
+        sprite.image = npc_assets.boy_sprites[0].clone_weak();
+      }
     }
   }
 }
@@ -229,8 +193,13 @@ impl NpcPlugin {
 impl Plugin for NpcPlugin {
   fn build(&self, app: &mut App) {
     app
-      .add_systems(Startup, Self::spawn_npc.after(WorldInitPlugin::world_init))
+      .add_systems(
+        Startup,
+        (Self::initialize_plugin, Self::spawn_npc)
+          .chain()
+          .after(WorldInitPlugin::world_init),
+      )
       .add_systems(FixedUpdate, Self::control_npcs)
-      .add_systems(Update, Self::set_npc_colors);
+      .add_systems(Update, Self::set_npc_wetness);
   }
 }
