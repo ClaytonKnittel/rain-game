@@ -3,7 +3,6 @@ use std::time::Duration;
 use bevy::{
   app::{App, FixedUpdate, Plugin, Startup},
   asset::{AssetServer, Handle},
-  color::Color,
   ecs::{
     bundle::Bundle,
     component::Component,
@@ -13,7 +12,7 @@ use bevy::{
     world::World,
   },
   image::Image,
-  math::{ops::atan2, primitives::Circle, Quat, Vec2, Vec3},
+  math::{ops::atan2, Quat, Vec2, Vec3},
   sprite::Sprite,
   time::{Time, Timer, TimerMode},
   transform::components::Transform,
@@ -21,8 +20,7 @@ use bevy::{
 use rand::Rng;
 
 use crate::{
-  gravity::GravityComponent, movable::MoveComponent, position::Position,
-  screen_object::ScreenObjectBundle, win_info::WinInfo,
+  gravity::GravityComponent, movable::MoveComponent, position::Position, win_info::WinInfo,
 };
 
 #[derive(Component)]
@@ -38,11 +36,11 @@ pub struct RainBundle {
 }
 
 impl RainBundle {
-  const IMG_WIDTH: f32 = 600.;
-  const IMG_HEIGHT: f32 = 672.;
+  // const IMG_WIDTH: f32 = 600.;
+  // const IMG_HEIGHT: f32 = 672.;
 
   const RAIN_WIDTH: f32 = 233.;
-  const RAIN_HEIGHT: f32 = 390.;
+  // const RAIN_HEIGHT: f32 = 390.;
 
   pub const RADIUS: f32 = 10.0;
 
