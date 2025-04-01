@@ -1,17 +1,19 @@
+use std::time::Duration;
+
 use bevy::{
   app::{App, FixedUpdate, Plugin, Startup},
-  asset::Assets,
-  color::Color,
+  asset::{AssetServer, Handle},
   ecs::{
     bundle::Bundle,
     component::Component,
     query::{With, Without},
     schedule::IntoSystemConfigs,
-    system::{Commands, Query, Res, ResMut, Single},
+    system::{Commands, Query, Res, Resource, Single},
   },
-  math::{primitives::Rectangle, Vec2},
-  render::mesh::{Mesh, Mesh2d},
-  sprite::{ColorMaterial, MeshMaterial2d},
+  image::Image,
+  math::{Vec2, Vec3},
+  sprite::Sprite,
+  time::{Time, Timer, TimerMode},
   transform::components::Transform,
 };
 
@@ -22,39 +24,77 @@ use crate::{
 
 #[derive(Component)]
 #[require(Transform)]
-struct Shack;
+struct Shack {
+  timer: Timer,
+  animation_idx: usize,
+}
+
+impl Shack {
+  const ANIMATION_SPEED: Duration = Duration::from_millis(300);
+
+  fn new() -> Self {
+    Self {
+      timer: Timer::new(Self::ANIMATION_SPEED, TimerMode::Repeating),
+      animation_idx: 0,
+    }
+  }
+
+  fn tick(&mut self, delta: Duration, shack_assets: &ShackAssets, sprite: &mut Sprite) {
+    self.timer.tick(delta);
+    if self.timer.just_finished() {
+      self.animation_idx = (self.animation_idx + 1) % shack_assets.shack_sprites.len();
+      sprite.image = shack_assets.shack_sprites[self.animation_idx].clone_weak();
+    }
+  }
+}
 
 #[derive(Bundle)]
 struct ShackBundle {
-  body: Mesh2d,
-  color: MeshMaterial2d<ColorMaterial>,
+  sprite: Sprite,
+  transform: Transform,
   pos: Position,
   shack: Shack,
+}
+
+#[derive(Resource)]
+struct ShackAssets {
+  shack_sprites: [Handle<Image>; 4],
 }
 
 pub struct ShackPlugin;
 
 impl ShackPlugin {
+  const IMG_WIDTH: f32 = 1500.;
+
   const WIDTH: f32 = 150.;
-  const HEIGHT: f32 = 240.;
+  const HEIGHT: f32 = 140.;
 
   const RAIN_RESTITUTION: f32 = 0.3;
 
-  fn spawn_shack(
-    mut commands: Commands,
-    win_info: Res<WinInfo>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-  ) {
+  fn initialize_plugin(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let shack_sprites = [1, 2, 3, 2].map(|idx| asset_server.load(format!("shack/shack_{idx}.png")));
+    commands.insert_resource(ShackAssets { shack_sprites });
+  }
+
+  fn spawn_shack(mut commands: Commands, win_info: Res<WinInfo>, shack_assets: Res<ShackAssets>) {
     commands.spawn(ShackBundle {
-      body: Mesh2d(meshes.add(Rectangle::from_size(Vec2::new(Self::WIDTH, Self::HEIGHT)))),
-      color: MeshMaterial2d(materials.add(Color::srgb(0.6, 0.8, 0.3))),
+      sprite: Sprite::from_image(shack_assets.shack_sprites[0].clone_weak()),
+      transform: Transform::from_scale(Vec3::splat(Self::WIDTH / Self::IMG_WIDTH)),
       pos: Position(Vec2 {
         x: win_info.width / 2. - Self::WIDTH / 2.,
         y: -win_info.height / 4.,
       }),
-      shack: Shack,
+      shack: Shack::new(),
     });
+  }
+
+  fn tick(
+    time: Res<Time>,
+    shack_assets: Res<ShackAssets>,
+    shack: Single<(&mut Shack, &mut Sprite)>,
+  ) {
+    let (mut shack, mut sprite) = shack.into_inner();
+    shack.tick(time.delta(), &shack_assets, &mut sprite);
   }
 
   fn handle_rain_collisions(
@@ -87,8 +127,12 @@ impl Plugin for ShackPlugin {
     app
       .add_systems(
         Startup,
-        Self::spawn_shack.after(WorldInitPlugin::world_init),
+        (
+          Self::initialize_plugin,
+          Self::spawn_shack.after(WorldInitPlugin::world_init),
+        )
+          .chain(),
       )
-      .add_systems(FixedUpdate, Self::handle_rain_collisions);
+      .add_systems(FixedUpdate, (Self::tick, Self::handle_rain_collisions));
   }
 }
