@@ -1,5 +1,6 @@
 #![allow(clippy::type_complexity)]
 
+mod background;
 mod framerate;
 mod gravity;
 mod movable;
@@ -11,6 +12,7 @@ mod shack;
 mod win_info;
 mod world_init;
 
+use background::BackgroundPlugin;
 use bevy::{app::App, DefaultPlugins};
 use framerate::FrameratePlugin;
 use gravity::GravityPlugin;
@@ -27,7 +29,13 @@ fn main() {
     .add_plugins(DefaultPlugins)
     .add_plugins(FrameratePlugin)
     .add_plugins(WorldInitPlugin)
-    .add_plugins((PlayerPlugin, RainPlugin, NpcPlugin, ShackPlugin))
+    .add_plugins((
+      PlayerPlugin,
+      RainPlugin,
+      NpcPlugin,
+      ShackPlugin,
+      BackgroundPlugin,
+    ))
     .add_plugins((PositionPlugin, MovePlugin, GravityPlugin))
     .run();
 }
