@@ -110,7 +110,7 @@ impl State {
 }
 
 #[derive(Component)]
-#[require(MoveComponent, Transform)]
+#[require(MoveComponent)]
 struct Npc {
   character: Character,
   state: State,
@@ -119,7 +119,7 @@ struct Npc {
 }
 
 impl Npc {
-  const WALK_SPEED: f32 = 40.;
+  const WALK_SPEED: f32 = 60.;
   const ANIMATION_PERIOD: Duration = Duration::from_millis(250);
 
   fn new(character: Character) -> Self {
@@ -185,6 +185,8 @@ impl NpcBundle {
   const WIDTH: f32 = 100.;
   const HEIGHT: f32 = Self::WIDTH * Self::ASPECT_RATIO;
 
+  const Z_IDX: f32 = 1.;
+
   fn bounding_rect() -> Rectangle {
     Rectangle::new(Self::WIDTH, Self::HEIGHT)
   }
@@ -194,7 +196,8 @@ impl NpcBundle {
     commands.spawn(NpcBundle {
       sprite: Sprite::from_image(npc.current_asset(npc_assets)),
       npc,
-      transform: Transform::from_scale(Vec3::splat(Self::WIDTH / Self::BOY_WIDTH)),
+      transform: Transform::from_scale(Vec3::splat(Self::WIDTH / Self::BOY_WIDTH))
+        .with_translation(Self::Z_IDX * Vec3::Z),
       pos,
     });
   }

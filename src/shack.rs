@@ -69,6 +69,8 @@ impl ShackPlugin {
   const WIDTH: f32 = 300.;
   const HEIGHT: f32 = 280.;
 
+  const Z_IDX: f32 = 2.;
+
   const RAIN_RESTITUTION: f32 = 0.3;
 
   fn initialize_plugin(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -79,7 +81,8 @@ impl ShackPlugin {
   fn spawn_shack(mut commands: Commands, win_info: Res<WinInfo>, shack_assets: Res<ShackAssets>) {
     commands.spawn(ShackBundle {
       sprite: Sprite::from_image(shack_assets.shack_sprites[0].clone_weak()),
-      transform: Transform::from_scale(Vec3::splat(Self::WIDTH / Self::IMG_WIDTH)),
+      transform: Transform::from_scale(Vec3::splat(Self::WIDTH / Self::IMG_WIDTH))
+        .with_translation(Self::Z_IDX * Vec3::Z),
       pos: Position(Vec2 {
         x: win_info.width / 2. - Self::WIDTH / 2.,
         y: -win_info.height * 0.4 + Self::HEIGHT / 2.,

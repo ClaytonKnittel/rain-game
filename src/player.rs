@@ -41,7 +41,9 @@ impl PlayerBundle {
   // const IMG_HEIGHT: f32 = 672.;
   // const ASPECT_RATIO: f32 = Self::IMG_HEIGHT / Self::IMG_WIDTH;
 
-  const WIDTH: f32 = 100.0;
+  const WIDTH: f32 = 180.0;
+
+  const Z_IDX: f32 = 1.;
 
   fn spawn_player(mut commands: Commands, asset_server: Res<AssetServer>) {
     let texture = asset_server.load::<Image>("umbrella/umbrella.png");
@@ -51,7 +53,8 @@ impl PlayerBundle {
     commands.queue(|world: &mut World| {
       world.spawn(Self {
         sprite,
-        transform: Transform::from_scale(Vec3::splat(Self::WIDTH / Self::IMG_WIDTH)),
+        transform: Transform::from_scale(Vec3::splat(Self::WIDTH / Self::IMG_WIDTH))
+          .with_translation(Self::Z_IDX * Vec3::Z),
         pos: Position(Vec2::ZERO),
         player: Player,
       });
@@ -62,7 +65,7 @@ impl PlayerBundle {
 pub struct PlayerPlugin;
 
 impl PlayerPlugin {
-  const SPEED: f32 = 200.0;
+  const SPEED: f32 = 400.0;
   const RAIN_RESTITUTION: f32 = 0.3;
 
   fn move_player(
