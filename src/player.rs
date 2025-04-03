@@ -66,7 +66,7 @@ pub struct PlayerPlugin;
 
 impl PlayerPlugin {
   const SPEED: f32 = 400.0;
-  const RAIN_RESTITUTION: f32 = 0.3;
+  const RAIN_RESTITUTION: f32 = 0.15;
 
   fn move_player(
     keyboard_input: Res<ButtonInput<KeyCode>>,
