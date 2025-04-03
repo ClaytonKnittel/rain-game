@@ -119,7 +119,7 @@ struct Npc {
 }
 
 impl Npc {
-  const WALK_SPEED: f32 = 20.;
+  const WALK_SPEED: f32 = 40.;
   const ANIMATION_PERIOD: Duration = Duration::from_millis(250);
 
   fn new(character: Character) -> Self {
@@ -182,7 +182,7 @@ impl NpcBundle {
   const BOY_HEIGHT: f32 = 656.;
   const ASPECT_RATIO: f32 = Self::BOY_HEIGHT / Self::BOY_WIDTH;
 
-  const WIDTH: f32 = 60.;
+  const WIDTH: f32 = 100.;
   const HEIGHT: f32 = Self::WIDTH * Self::ASPECT_RATIO;
 
   fn bounding_rect() -> Rectangle {
@@ -290,7 +290,7 @@ impl NpcPlugin {
     state.spawn_timer.tick(time.delta());
 
     if state.spawn_timer.just_finished() {
-      let height = -win_info.height / 4.;
+      let height = -win_info.height * 0.39 + NpcBundle::HEIGHT / 2.;
       NpcBundle::spawn(
         commands,
         Character::random_character(),
