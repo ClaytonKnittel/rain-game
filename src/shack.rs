@@ -66,8 +66,7 @@ pub struct ShackPlugin;
 impl ShackPlugin {
   const IMG_WIDTH: f32 = 1500.;
 
-  // 3 3 5 5, 2 3 5 7
-  const WIDTH: f32 = 300.; // 15, 14
+  const WIDTH: f32 = 300.;
   const HEIGHT: f32 = 280.;
 
   const RAIN_RESTITUTION: f32 = 0.3;
