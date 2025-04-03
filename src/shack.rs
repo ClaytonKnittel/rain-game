@@ -66,8 +66,9 @@ pub struct ShackPlugin;
 impl ShackPlugin {
   const IMG_WIDTH: f32 = 1500.;
 
-  const WIDTH: f32 = 150.;
-  const HEIGHT: f32 = 140.;
+  // 3 3 5 5, 2 3 5 7
+  const WIDTH: f32 = 300.; // 15, 14
+  const HEIGHT: f32 = 280.;
 
   const RAIN_RESTITUTION: f32 = 0.3;
 
@@ -82,7 +83,7 @@ impl ShackPlugin {
       transform: Transform::from_scale(Vec3::splat(Self::WIDTH / Self::IMG_WIDTH)),
       pos: Position(Vec2 {
         x: win_info.width / 2. - Self::WIDTH / 2.,
-        y: -win_info.height / 4.,
+        y: -win_info.height * 0.4 + Self::HEIGHT / 2.,
       }),
       shack: Shack::new(),
     });
