@@ -12,18 +12,17 @@ use bevy::{
     system::{Commands, Query, Res, ResMut, Resource},
   },
   image::Image,
-  math::{primitives::Rectangle, FloatPow, Vec2, Vec3},
+  math::Vec2,
   sprite::Sprite,
   time::{Time, Timer, TimerMode},
-  transform::components::Transform,
 };
 
 use crate::{
   movable::MoveComponent,
   position::Position,
   rain::{Rain, RainBundle},
-  win_info::WinInfo,
   world_init::WorldInitPlugin,
+  world_unit::{WorldRect, WorldUnit, WorldVec2},
 };
 
 enum Character {
@@ -118,7 +117,7 @@ struct Npc {
 }
 
 impl Npc {
-  const WALK_SPEED: f32 = 60.;
+  const WALK_SPEED: WorldUnit = WorldUnit::new(2.5);
   const ANIMATION_PERIOD: Duration = Duration::from_millis(250);
 
   fn new(character: Character) -> Self {
@@ -170,34 +169,31 @@ impl Npc {
 struct NpcBundle {
   sprite: Sprite,
   npc: Npc,
-  transform: Transform,
   pos: Position,
 }
 
 impl NpcBundle {
   // const BOY_WIDTH: f32 = 750.;
   // const BOY_HEIGHT: f32 = 1250.;
-  const BOY_WIDTH: f32 = 589.;
-  const BOY_HEIGHT: f32 = 656.;
-  const ASPECT_RATIO: f32 = Self::BOY_HEIGHT / Self::BOY_WIDTH;
+  const BOY_WIDTH: u32 = 589;
+  const BOY_HEIGHT: u32 = 656;
+  const ASPECT_RATIO: f32 = Self::BOY_HEIGHT as f32 / Self::BOY_WIDTH as f32;
 
-  const WIDTH: f32 = 100.;
-  const HEIGHT: f32 = Self::WIDTH * Self::ASPECT_RATIO;
+  const WIDTH: WorldUnit = WorldUnit::new(3.9);
+  const HEIGHT: WorldUnit = WorldUnit::new(3.9 * Self::ASPECT_RATIO);
 
   const Z_IDX: f32 = 1.;
 
-  fn bounding_rect() -> Rectangle {
-    Rectangle::new(Self::WIDTH, Self::HEIGHT)
+  fn bounding_rect() -> WorldRect {
+    WorldRect::new(Self::WIDTH, Self::HEIGHT)
   }
 
-  fn spawn(mut commands: Commands, character: Character, pos: Position, npc_assets: &NpcAssets) {
+  fn spawn(mut commands: Commands, character: Character, pos: WorldVec2, npc_assets: &NpcAssets) {
     let npc = Npc::new(character);
     commands.spawn(NpcBundle {
       sprite: Sprite::from_image(npc.current_asset(npc_assets)),
       npc,
-      transform: Transform::from_scale(Vec3::splat(Self::WIDTH / Self::BOY_WIDTH))
-        .with_translation(Self::Z_IDX * Vec3::Z),
-      pos,
+      pos: Position::new(pos, Self::WIDTH, Self::BOY_WIDTH, Self::Z_IDX),
     });
   }
 }
@@ -287,19 +283,18 @@ impl NpcPlugin {
     time: Res<Time>,
     mut state: ResMut<NpcPluginState>,
     npc_assets: Res<NpcAssets>,
-    win_info: Res<WinInfo>,
   ) {
     state.spawn_timer.tick(time.delta());
 
     if state.spawn_timer.just_finished() {
-      let height = -win_info.height * 0.39 + NpcBundle::HEIGHT / 2.;
       NpcBundle::spawn(
         commands,
         Character::random_character(),
-        Position(Vec2::new(
-          -win_info.width / 2. - NpcBundle::WIDTH / 2.,
-          height,
-        )),
+        WorldVec2::new_normalized(-1., -0.78)
+          + WorldVec2 {
+            x: -NpcBundle::WIDTH / 2.,
+            y: NpcBundle::HEIGHT / 2.,
+          },
         &npc_assets,
       );
     }
@@ -307,14 +302,15 @@ impl NpcPlugin {
 
   fn control_npcs(
     mut commands: Commands,
-    win_info: Res<WinInfo>,
     mut npc_query: Query<(&mut Npc, &Position, &mut MoveComponent)>,
     rain_query: Query<(Entity, &Position), With<Rain>>,
   ) {
-    for (mut npc, &Position(npc_pos), mut npc_vel) in &mut npc_query {
-      if npc_pos.x > -win_info.width / 2. + NpcBundle::WIDTH / 2. {
+    for (mut npc, npc_pos, mut npc_vel) in &mut npc_query {
+      let npc_pos = npc_pos.pos;
+
+      if npc_pos.x > WorldUnit::LEFT + NpcBundle::WIDTH / 2. {
         for (rain_entity, rain_pos) in &rain_query {
-          let dist = rain_pos.0 - npc_pos;
+          let dist = rain_pos.pos - npc_pos;
           let closest_point = NpcBundle::bounding_rect().closest_point(dist);
           if (closest_point - dist).length_squared() < RainBundle::RADIUS.squared() {
             npc.state.absorb_rain();
@@ -326,7 +322,7 @@ impl NpcPlugin {
       if !npc.state.is_wet() {
         npc_vel.delta = Npc::WALK_SPEED * Vec2::X;
       } else {
-        npc_vel.delta = Vec2::ZERO;
+        npc_vel.delta = WorldVec2::ZERO;
       }
     }
   }

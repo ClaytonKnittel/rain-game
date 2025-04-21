@@ -11,19 +11,19 @@ use bevy::{
     system::{Commands, Query, Res, Resource, Single},
   },
   image::Image,
-  math::{Vec2, Vec3},
   sprite::Sprite,
   time::{Time, Timer, TimerMode},
-  transform::components::Transform,
 };
 
 use crate::{
-  movable::MoveComponent, position::Position, rain::Rain, win_info::WinInfo,
+  movable::MoveComponent,
+  position::Position,
+  rain::Rain,
   world_init::WorldInitPlugin,
+  world_unit::{WorldUnit, WorldVec2},
 };
 
 #[derive(Component)]
-#[require(Transform)]
 struct Shack {
   timer: Timer,
   animation_idx: usize,
@@ -51,7 +51,6 @@ impl Shack {
 #[derive(Bundle)]
 struct ShackBundle {
   sprite: Sprite,
-  transform: Transform,
   pos: Position,
   shack: Shack,
 }
@@ -64,10 +63,10 @@ struct ShackAssets {
 pub struct ShackPlugin;
 
 impl ShackPlugin {
-  const IMG_WIDTH: f32 = 1500.;
+  const IMG_WIDTH: u32 = 1500;
 
-  const WIDTH: f32 = 300.;
-  const HEIGHT: f32 = 280.;
+  const WIDTH: WorldUnit = WorldUnit::new(11.7);
+  const HEIGHT: WorldUnit = WorldUnit::new(10.9);
 
   const Z_IDX: f32 = 2.;
 
@@ -78,15 +77,18 @@ impl ShackPlugin {
     commands.insert_resource(ShackAssets { shack_sprites });
   }
 
-  fn spawn_shack(mut commands: Commands, win_info: Res<WinInfo>, shack_assets: Res<ShackAssets>) {
+  fn spawn_shack(mut commands: Commands, shack_assets: Res<ShackAssets>) {
     commands.spawn(ShackBundle {
       sprite: Sprite::from_image(shack_assets.shack_sprites[0].clone_weak()),
-      transform: Transform::from_scale(Vec3::splat(Self::WIDTH / Self::IMG_WIDTH))
-        .with_translation(Self::Z_IDX * Vec3::Z),
-      pos: Position(Vec2 {
-        x: win_info.width / 2. - Self::WIDTH / 2.,
-        y: -win_info.height * 0.4 + Self::HEIGHT / 2.,
-      }),
+      pos: Position::new(
+        WorldVec2::new(
+          WorldUnit::RIGHT - Self::WIDTH / 2.,
+          WorldUnit::BOTTOM + Self::HEIGHT / 2.,
+        ) + WorldVec2::new_normalized(0., 0.2),
+        Self::WIDTH,
+        Self::IMG_WIDTH,
+        Self::Z_IDX,
+      ),
       shack: Shack::new(),
     });
   }
@@ -104,21 +106,22 @@ impl ShackPlugin {
     shack: Single<&Position, With<Shack>>,
     mut rain_query: Query<(&Position, &mut MoveComponent), (With<Rain>, Without<Shack>)>,
   ) {
-    let Position(shack_pos) = shack.into_inner();
-    for (Position(rain_pos), mut rain_vel) in &mut rain_query {
+    let shack_pos = shack.into_inner().pos;
+    for (rain_pos, mut rain_vel) in &mut rain_query {
+      let rain_pos = rain_pos.pos;
       let diff = rain_pos - shack_pos;
 
-      let tl_corner = shack_pos + Vec2::new(-Self::WIDTH / 2., Self::HEIGHT / 2.);
+      let tl_corner = shack_pos + WorldVec2::new(-Self::WIDTH / 2., Self::HEIGHT / 2.);
       let from_tl_corner = rain_pos - tl_corner;
 
       if diff.x.abs() <= Self::WIDTH / 2. && diff.y.abs() <= Self::HEIGHT / 2. {
         if from_tl_corner.y < -from_tl_corner.x {
-          if rain_vel.delta.x > 0. {
+          if rain_vel.delta.x > WorldUnit::ZERO {
             rain_vel.delta.x = -rain_vel.delta.x * Self::RAIN_RESTITUTION;
           }
-        } else if rain_vel.delta.y < 0. {
+        } else if rain_vel.delta.y < WorldUnit::ZERO {
           rain_vel.delta.y = -rain_vel.delta.y * Self::RAIN_RESTITUTION;
-          rain_vel.delta.x += 1.;
+          rain_vel.delta.x += WorldUnit::new(0.1);
         }
       }
     }

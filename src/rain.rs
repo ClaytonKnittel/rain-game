@@ -12,14 +12,16 @@ use bevy::{
     world::World,
   },
   image::Image,
-  math::{ops::atan2, Quat, Vec2, Vec3},
+  math::{ops::atan2, Quat},
   sprite::Sprite,
   time::{Time, Timer, TimerMode},
-  transform::components::Transform,
 };
 
 use crate::{
-  gravity::GravityComponent, movable::MoveComponent, position::Position, win_info::WinInfo,
+  gravity::GravityComponent,
+  movable::MoveComponent,
+  position::Position,
+  world_unit::{WorldUnit, WorldVec2},
 };
 
 #[derive(Component)]
@@ -29,7 +31,6 @@ pub struct Rain;
 #[derive(Bundle)]
 pub struct RainBundle {
   sprite: Sprite,
-  transform: Transform,
   pos: Position,
   rain: Rain,
 }
@@ -38,17 +39,18 @@ impl RainBundle {
   // const IMG_WIDTH: f32 = 600.;
   // const IMG_HEIGHT: f32 = 672.;
 
-  const RAIN_WIDTH: f32 = 233.;
+  const RAIN_WIDTH: u32 = 233;
   // const RAIN_HEIGHT: f32 = 390.;
 
-  pub const RADIUS: f32 = 11.0;
+  pub const RADIUS: WorldUnit = WorldUnit::new(0.4);
 
-  fn spawn_rain(mut commands: Commands, rain_image: Handle<Image>, pos: Vec2) {
+  const Z_IDX: f32 = 0.;
+
+  fn spawn_rain(mut commands: Commands, rain_image: Handle<Image>, pos: WorldVec2) {
     commands.queue(move |world: &mut World| {
       world.spawn(Self {
         sprite: Sprite::from_image(rain_image),
-        transform: Transform::from_scale(Vec3::splat(Self::RADIUS / Self::RAIN_WIDTH)),
-        pos: Position(pos),
+        pos: Position::new(pos, Self::RADIUS, Self::RAIN_WIDTH, Self::Z_IDX),
         rain: Rain,
       });
     });
@@ -75,41 +77,31 @@ impl RainPlugin {
     });
   }
 
-  fn spawn_raindrops(
-    commands: Commands,
-    time: Res<Time>,
-    win_info: Res<WinInfo>,
-    mut resources: ResMut<RainResources>,
-  ) {
+  fn spawn_raindrops(commands: Commands, time: Res<Time>, mut resources: ResMut<RainResources>) {
     if resources.timer.tick(time.delta()).just_finished() {
-      let x = (fastrand::f32() - 0.5) * win_info.width;
       RainBundle::spawn_rain(
         commands,
         resources.rain_image.clone_weak(),
-        Vec2 { x, y: win_info.height / 2. },
+        WorldVec2::new_normalized(2. * fastrand::f32() - 1., 1.),
       );
     }
   }
 
-  fn despawn_raindrops(
-    mut commands: Commands,
-    win_info: Res<WinInfo>,
-    query: Query<(Entity, &Position), With<Rain>>,
-  ) {
-    let min_y = -win_info.height / 2. - RainBundle::RADIUS;
-    let x_bound = win_info.width / 2. + RainBundle::RADIUS;
-    for (entity, Position(pos)) in &query {
+  fn despawn_raindrops(mut commands: Commands, query: Query<(Entity, &Position), With<Rain>>) {
+    let min_y = WorldUnit::BOTTOM - RainBundle::RADIUS;
+    let x_bound = WorldUnit::RIGHT + RainBundle::RADIUS;
+    for (entity, Position { pos, .. }) in &query {
       if pos.y < min_y || !(-x_bound..x_bound).contains(&pos.x) {
         commands.entity(entity).despawn();
       }
     }
   }
 
-  fn rotate_raindrops(mut query: Query<(&MoveComponent, &mut Transform), With<Rain>>) {
-    for (movement, mut transform) in &mut query {
-      let delta = movement.delta.try_normalize().unwrap_or(-Vec2::Y);
-      let angle = atan2(delta.x, -delta.y);
-      *transform = transform.with_rotation(Quat::from_rotation_z(angle));
+  fn rotate_raindrops(mut query: Query<(&MoveComponent, &mut Position), With<Rain>>) {
+    for (movement, mut pos) in &mut query {
+      let delta = movement.delta.try_normalize().unwrap_or(-WorldVec2::Y);
+      let angle = atan2(delta.x.to_untyped(), -delta.y.to_untyped());
+      pos.rotation = Quat::from_rotation_z(angle);
     }
   }
 }
