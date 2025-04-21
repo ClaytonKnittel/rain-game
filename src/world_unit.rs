@@ -13,10 +13,14 @@ impl WorldUnit {
   const UNITS_PER_SCREEN_WIDTH: f32 = 50.;
   const UNITS_PER_SCREEN_HEIGHT: f32 = Self::UNITS_PER_SCREEN_WIDTH * Self::SCREEN_ASPECT_RATIO;
 
+  pub const ZERO: Self = Self(0.);
+
   pub const TOP: Self = Self::normalized_y(1.);
   pub const BOTTOM: Self = Self::normalized_y(-1.);
   pub const LEFT: Self = Self::normalized_x(-1.);
   pub const RIGHT: Self = Self::normalized_x(1.);
+
+  pub const SCREEN_WIDTH: Self = Self(Self::UNITS_PER_SCREEN_WIDTH);
 
   pub const fn new(units: f32) -> Self {
     Self(units)
@@ -105,6 +109,8 @@ pub struct WorldVec2 {
 }
 
 impl WorldVec2 {
+  pub const ZERO: WorldVec2 = Self { x: WorldUnit::ZERO, y: WorldUnit::ZERO };
+
   pub const fn normalized(x: f32, y: f32) -> Self {
     Self {
       x: WorldUnit::normalized_x(x),

@@ -7,38 +7,46 @@ use bevy::{
     schedule::IntoSystemConfigs,
     system::{Commands, Res},
   },
-  math::{Vec2, Vec3},
   sprite::Sprite,
   transform::components::Transform,
 };
 
-use crate::{position::OldPosition, win_info::WinInfo, world_init::WorldInitPlugin};
+use crate::{
+  position::Position,
+  world_init::WorldInitPlugin,
+  world_unit::{WorldUnit, WorldVec2},
+};
 
 #[derive(Component)]
+#[require(Transform)]
 struct Background;
 
 #[derive(Bundle)]
 struct BackgroundBundle {
   sprite: Sprite,
-  transform: Transform,
-  pos: OldPosition,
+  pos: Position,
   background: Background,
 }
 
 pub struct BackgroundPlugin;
 
 impl BackgroundPlugin {
-  const IMG_WIDTH: f32 = 1280.;
-  // const IMG_HEIGHT: f32 = 720.;
+  const IMG_WIDTH: u32 = 1280;
+  // const IMG_HEIGHT: u32 = 720;
 
-  fn spawn(mut commands: Commands, win_info: Res<WinInfo>, asset_server: Res<AssetServer>) {
+  const Z_IDX: f32 = -10.;
+
+  fn spawn(mut commands: Commands, asset_server: Res<AssetServer>) {
     let sprite = Sprite::from_image(asset_server.load("background/background.jpg"));
 
     commands.spawn(BackgroundBundle {
       sprite,
-      transform: Transform::from_scale(Vec3::splat(win_info.width / Self::IMG_WIDTH))
-        .with_translation(-10. * Vec3::Z),
-      pos: OldPosition(Vec2::ZERO),
+      pos: Position::new(
+        WorldVec2::ZERO,
+        WorldUnit::SCREEN_WIDTH,
+        Self::IMG_WIDTH,
+        Self::Z_IDX,
+      ),
       background: Background,
     });
   }

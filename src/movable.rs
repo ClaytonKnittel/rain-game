@@ -2,7 +2,6 @@ use bevy::{
   app::{App, FixedUpdate, Plugin},
   ecs::{
     component::Component,
-    query::Or,
     system::{Query, Res},
   },
   math::Vec2,

@@ -45,11 +45,13 @@ impl RainBundle {
 
   pub const RADIUS: WorldUnit = WorldUnit::new(0.4);
 
+  const Z_IDX: f32 = 0.;
+
   fn spawn_rain(mut commands: Commands, rain_image: Handle<Image>, pos: WorldVec2) {
     commands.queue(move |world: &mut World| {
       world.spawn(Self {
         sprite: Sprite::from_image(rain_image),
-        pos: Position::new(pos, Self::RADIUS, Self::RAIN_WIDTH),
+        pos: Position::new(pos, Self::RADIUS, Self::RAIN_WIDTH, Self::Z_IDX),
         rain: Rain,
       });
     });
