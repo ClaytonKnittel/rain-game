@@ -12,7 +12,7 @@ use bevy::{
   transform::components::Transform,
 };
 
-use crate::{position::Position, win_info::WinInfo, world_init::WorldInitPlugin};
+use crate::{position::OldPosition, win_info::WinInfo, world_init::WorldInitPlugin};
 
 #[derive(Component)]
 struct Background;
@@ -21,7 +21,7 @@ struct Background;
 struct BackgroundBundle {
   sprite: Sprite,
   transform: Transform,
-  pos: Position,
+  pos: OldPosition,
   background: Background,
 }
 
@@ -38,7 +38,7 @@ impl BackgroundPlugin {
       sprite,
       transform: Transform::from_scale(Vec3::splat(win_info.width / Self::IMG_WIDTH))
         .with_translation(-10. * Vec3::Z),
-      pos: Position(Vec2::ZERO),
+      pos: OldPosition(Vec2::ZERO),
       background: Background,
     });
   }

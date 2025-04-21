@@ -20,7 +20,7 @@ use bevy::{
 
 use crate::{
   movable::MoveComponent,
-  position::Position,
+  position::{OldPosition, Position},
   rain::{Rain, RainBundle},
   win_info::WinInfo,
   world_init::WorldInitPlugin,
@@ -171,7 +171,7 @@ struct NpcBundle {
   sprite: Sprite,
   npc: Npc,
   transform: Transform,
-  pos: Position,
+  pos: OldPosition,
 }
 
 impl NpcBundle {
@@ -190,7 +190,7 @@ impl NpcBundle {
     Rectangle::new(Self::WIDTH, Self::HEIGHT)
   }
 
-  fn spawn(mut commands: Commands, character: Character, pos: Position, npc_assets: &NpcAssets) {
+  fn spawn(mut commands: Commands, character: Character, pos: OldPosition, npc_assets: &NpcAssets) {
     let npc = Npc::new(character);
     commands.spawn(NpcBundle {
       sprite: Sprite::from_image(npc.current_asset(npc_assets)),
@@ -296,7 +296,7 @@ impl NpcPlugin {
       NpcBundle::spawn(
         commands,
         Character::random_character(),
-        Position(Vec2::new(
+        OldPosition(Vec2::new(
           -win_info.width / 2. - NpcBundle::WIDTH / 2.,
           height,
         )),
@@ -308,15 +308,16 @@ impl NpcPlugin {
   fn control_npcs(
     mut commands: Commands,
     win_info: Res<WinInfo>,
-    mut npc_query: Query<(&mut Npc, &Position, &mut MoveComponent)>,
+    mut npc_query: Query<(&mut Npc, &OldPosition, &mut MoveComponent)>,
     rain_query: Query<(Entity, &Position), With<Rain>>,
   ) {
-    for (mut npc, &Position(npc_pos), mut npc_vel) in &mut npc_query {
+    for (mut npc, &OldPosition(npc_pos), mut npc_vel) in &mut npc_query {
       if npc_pos.x > -win_info.width / 2. + NpcBundle::WIDTH / 2. {
         for (rain_entity, rain_pos) in &rain_query {
-          let dist = rain_pos.0 - npc_pos;
+          let dist = rain_pos.pos.to_absolute(&win_info) - npc_pos;
           let closest_point = NpcBundle::bounding_rect().closest_point(dist);
-          if (closest_point - dist).length_squared() < RainBundle::RADIUS.squared() {
+          if (closest_point - dist).length_squared() < RainBundle::RADIUS.to_x(&win_info).squared()
+          {
             npc.state.absorb_rain();
             commands.entity(rain_entity).despawn();
           }

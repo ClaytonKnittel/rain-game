@@ -1,4 +1,4 @@
-use std::ops::{Add, Div, Mul, Neg, Sub};
+use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub};
 
 use bevy::math::Vec2;
 
@@ -52,7 +52,7 @@ impl WorldUnit {
   }
 }
 
-impl Add<Self> for WorldUnit {
+impl Add for WorldUnit {
   type Output = Self;
 
   fn add(self, rhs: Self) -> Self {
@@ -60,7 +60,13 @@ impl Add<Self> for WorldUnit {
   }
 }
 
-impl Sub<Self> for WorldUnit {
+impl AddAssign for WorldUnit {
+  fn add_assign(&mut self, rhs: Self) {
+    self.0 += rhs.0;
+  }
+}
+
+impl Sub for WorldUnit {
   type Output = Self;
 
   fn sub(self, rhs: Self) -> Self {
@@ -108,5 +114,12 @@ impl WorldVec2 {
 
   pub fn to_absolute(self, win_info: &WinInfo) -> Vec2 {
     Vec2 { x: self.x.0, y: self.y.0 } * WorldUnit::scale(win_info)
+  }
+}
+
+impl AddAssign for WorldVec2 {
+  fn add_assign(&mut self, rhs: Self) {
+    self.x += rhs.x;
+    self.y += rhs.y;
   }
 }

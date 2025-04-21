@@ -18,7 +18,10 @@ use bevy::{
 };
 
 use crate::{
-  movable::MoveComponent, position::Position, rain::Rain, win_info::WinInfo,
+  movable::MoveComponent,
+  position::{OldPosition, Position},
+  rain::Rain,
+  win_info::WinInfo,
   world_init::WorldInitPlugin,
 };
 
@@ -52,7 +55,7 @@ impl Shack {
 struct ShackBundle {
   sprite: Sprite,
   transform: Transform,
-  pos: Position,
+  pos: OldPosition,
   shack: Shack,
 }
 
@@ -83,7 +86,7 @@ impl ShackPlugin {
       sprite: Sprite::from_image(shack_assets.shack_sprites[0].clone_weak()),
       transform: Transform::from_scale(Vec3::splat(Self::WIDTH / Self::IMG_WIDTH))
         .with_translation(Self::Z_IDX * Vec3::Z),
-      pos: Position(Vec2 {
+      pos: OldPosition(Vec2 {
         x: win_info.width / 2. - Self::WIDTH / 2.,
         y: -win_info.height * 0.4 + Self::HEIGHT / 2.,
       }),
@@ -101,11 +104,13 @@ impl ShackPlugin {
   }
 
   fn handle_rain_collisions(
-    shack: Single<&Position, With<Shack>>,
+    win_info: Res<WinInfo>,
+    shack: Single<&OldPosition, With<Shack>>,
     mut rain_query: Query<(&Position, &mut MoveComponent), (With<Rain>, Without<Shack>)>,
   ) {
-    let Position(shack_pos) = shack.into_inner();
-    for (Position(rain_pos), mut rain_vel) in &mut rain_query {
+    let OldPosition(shack_pos) = shack.into_inner();
+    for (rain_pos, mut rain_vel) in &mut rain_query {
+      let rain_pos = rain_pos.pos.to_absolute(&win_info);
       let diff = rain_pos - shack_pos;
 
       let tl_corner = shack_pos + Vec2::new(-Self::WIDTH / 2., Self::HEIGHT / 2.);

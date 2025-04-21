@@ -18,7 +18,7 @@ use bevy::{
 
 use crate::{
   movable::{MoveComponent, MovePlugin},
-  position::Position,
+  position::{OldPosition, Position},
   rain::{Rain, RainBundle},
   win_info::WinInfo,
 };
@@ -32,7 +32,7 @@ struct Player;
 struct PlayerBundle {
   sprite: Sprite,
   transform: Transform,
-  pos: Position,
+  pos: OldPosition,
   player: Player,
 }
 
@@ -55,7 +55,7 @@ impl PlayerBundle {
         sprite,
         transform: Transform::from_scale(Vec3::splat(Self::WIDTH / Self::IMG_WIDTH))
           .with_translation(Self::Z_IDX * Vec3::Z),
-        pos: Position(Vec2::ZERO),
+        pos: OldPosition(Vec2::ZERO),
         player: Player,
       });
     });
@@ -92,7 +92,7 @@ impl PlayerPlugin {
     }
   }
 
-  fn snap_in_bounds(win_info: Res<WinInfo>, mut query: Query<&mut Position, With<Player>>) {
+  fn snap_in_bounds(win_info: Res<WinInfo>, mut query: Query<&mut OldPosition, With<Player>>) {
     for mut position in &mut query {
       position.0.x = position
         .0
@@ -108,14 +108,17 @@ impl PlayerPlugin {
   }
 
   fn handle_rain_collisions(
-    player: Single<(&Position, &MoveComponent), With<Player>>,
+    win_info: Res<WinInfo>,
+    player: Single<(&OldPosition, &MoveComponent), With<Player>>,
     mut rain_query: Query<(&Position, &mut MoveComponent), (With<Rain>, Without<Player>)>,
   ) {
-    let (Position(player_pos), player_vel) = player.into_inner();
-    for (Position(rain_pos), mut rain_vel) in &mut rain_query {
-      let diff = rain_pos - player_pos;
+    let (OldPosition(player_pos), player_vel) = player.into_inner();
+    for (rain_pos, mut rain_vel) in &mut rain_query {
+      let diff = rain_pos.pos.to_absolute(&win_info) - player_pos;
       let dist2 = diff.length_squared();
-      if diff.y >= 0. && dist2 < (PlayerBundle::WIDTH / 2. + RainBundle::RADIUS).squared() {
+      if diff.y >= 0.
+        && dist2 < (PlayerBundle::WIDTH / 2. + RainBundle::RADIUS.to_x(&win_info)).squared()
+      {
         let relative_vel = rain_vel.delta - player_vel.delta;
 
         let diff = diff.normalize();

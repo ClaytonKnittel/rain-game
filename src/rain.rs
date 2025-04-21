@@ -43,7 +43,7 @@ impl RainBundle {
   const RAIN_WIDTH: u32 = 233;
   // const RAIN_HEIGHT: f32 = 390.;
 
-  pub const RADIUS: WorldUnit = WorldUnit::new(0.22);
+  pub const RADIUS: WorldUnit = WorldUnit::new(0.4);
 
   fn spawn_rain(mut commands: Commands, rain_image: Handle<Image>, pos: WorldVec2) {
     commands.queue(move |world: &mut World| {
