@@ -15,7 +15,6 @@ use bevy::{
   math::{ops::atan2, Quat},
   sprite::Sprite,
   time::{Time, Timer, TimerMode},
-  transform::components::Transform,
 };
 
 use crate::{
@@ -98,11 +97,11 @@ impl RainPlugin {
     }
   }
 
-  fn rotate_raindrops(mut query: Query<(&MoveComponent, &mut Transform), With<Rain>>) {
-    for (movement, mut transform) in &mut query {
+  fn rotate_raindrops(mut query: Query<(&MoveComponent, &mut Position), With<Rain>>) {
+    for (movement, mut pos) in &mut query {
       let delta = movement.delta.try_normalize().unwrap_or(-WorldVec2::Y);
       let angle = atan2(delta.x.to_untyped(), -delta.y.to_untyped());
-      *transform = transform.with_rotation(Quat::from_rotation_z(angle));
+      pos.rotation = Quat::from_rotation_z(angle);
     }
   }
 }

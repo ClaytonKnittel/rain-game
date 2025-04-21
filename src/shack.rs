@@ -13,7 +13,6 @@ use bevy::{
   image::Image,
   sprite::Sprite,
   time::{Time, Timer, TimerMode},
-  transform::components::Transform,
 };
 
 use crate::{
@@ -25,7 +24,6 @@ use crate::{
 };
 
 #[derive(Component)]
-#[require(Transform)]
 struct Shack {
   timer: Timer,
   animation_idx: usize,
