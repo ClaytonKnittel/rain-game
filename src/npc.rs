@@ -17,7 +17,6 @@ use bevy::{
   time::{Time, Timer, TimerMode},
   transform::components::Transform,
 };
-use rand::Rng;
 
 use crate::{
   movable::MoveComponent,
@@ -51,7 +50,7 @@ impl Character {
   }
 
   fn random_character() -> Self {
-    match rand::rng().random_range(0..7) {
+    match fastrand::i32(0..7) {
       0 => Self::Boy,
       1 => Self::Nun,
       2 => Self::OldMan,

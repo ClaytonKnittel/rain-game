@@ -5,8 +5,8 @@ edition = "2021"
 
 [dependencies]
 bevy = { version = "0.15.3", features = ["jpeg"] }
+fastrand = "2.3.0"
 googletest = "0.14.0"
-rand = "0.9.0"
 
 [profile.dev.package."*"]
 opt-level = 3

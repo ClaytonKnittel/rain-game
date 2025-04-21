@@ -17,7 +17,6 @@ use bevy::{
   time::{Time, Timer, TimerMode},
   transform::components::Transform,
 };
-use rand::Rng;
 
 use crate::{
   gravity::GravityComponent, movable::MoveComponent, position::Position, win_info::WinInfo,
@@ -83,7 +82,7 @@ impl RainPlugin {
     mut resources: ResMut<RainResources>,
   ) {
     if resources.timer.tick(time.delta()).just_finished() {
-      let x = rand::rng().random_range((-win_info.width / 2.)..win_info.width / 2.);
+      let x = (fastrand::f32() - 0.5) * win_info.width;
       RainBundle::spawn_rain(
         commands,
         resources.rain_image.clone_weak(),
