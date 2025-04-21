@@ -11,6 +11,7 @@ mod rain;
 mod shack;
 mod win_info;
 mod world_init;
+mod world_unit;
 
 use background::BackgroundPlugin;
 use bevy::{app::App, DefaultPlugins};
