@@ -14,7 +14,13 @@ mod world_init;
 mod world_unit;
 
 use background::BackgroundPlugin;
-use bevy::{app::App, DefaultPlugins};
+use bevy::{
+  app::App,
+  prelude::PluginGroup,
+  utils::default,
+  window::{PresentMode, Window, WindowPlugin},
+  DefaultPlugins,
+};
 use framerate::FrameratePlugin;
 use gravity::GravityPlugin;
 use movable::MovePlugin;
@@ -27,7 +33,17 @@ use world_init::WorldInitPlugin;
 
 fn main() {
   App::new()
-    .add_plugins(DefaultPlugins)
+    .add_plugins(DefaultPlugins.set(WindowPlugin {
+      primary_window: Some(Window {
+        title: "Rain Game".into(),
+        name: Some("rain_game.app".into()),
+        present_mode: PresentMode::AutoVsync,
+        fit_canvas_to_parent: true,
+        prevent_default_event_handling: false,
+        ..default()
+      }),
+      ..default()
+    }))
     .add_plugins(FrameratePlugin)
     .add_plugins(WorldInitPlugin)
     .add_plugins((
