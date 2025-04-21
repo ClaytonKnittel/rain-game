@@ -19,6 +19,7 @@ impl WorldInitPlugin {
     commands.init_resource::<WinInfo>();
   }
 
+  #[cfg(not(target_arch = "wasm32"))]
   fn app_exit_listener(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut app_exit: EventWriter<AppExit>,
@@ -27,6 +28,9 @@ impl WorldInitPlugin {
       app_exit.send(AppExit::Success);
     }
   }
+
+  #[cfg(target_arch = "wasm32")]
+  fn app_exit_listener() {}
 
   fn resize_listener(mut resize_events: EventReader<WindowResized>, mut win_info: ResMut<WinInfo>) {
     for e in resize_events.read() {
