@@ -12,18 +12,18 @@ use bevy::{
     system::{Commands, Query, Res, ResMut, Resource},
   },
   image::Image,
-  math::{primitives::Rectangle, FloatPow, Vec2, Vec3},
+  math::{primitives::Rectangle, FloatPow, Vec2},
   sprite::Sprite,
   time::{Time, Timer, TimerMode},
-  transform::components::Transform,
 };
 
 use crate::{
   movable::MoveComponent,
-  position::{OldPosition, Position},
+  position::Position,
   rain::{Rain, RainBundle},
   win_info::WinInfo,
   world_init::WorldInitPlugin,
+  world_unit::{WorldUnit, WorldVec2},
 };
 
 enum Character {
@@ -170,34 +170,31 @@ impl Npc {
 struct NpcBundle {
   sprite: Sprite,
   npc: Npc,
-  transform: Transform,
-  pos: OldPosition,
+  pos: Position,
 }
 
 impl NpcBundle {
   // const BOY_WIDTH: f32 = 750.;
   // const BOY_HEIGHT: f32 = 1250.;
-  const BOY_WIDTH: f32 = 589.;
-  const BOY_HEIGHT: f32 = 656.;
-  const ASPECT_RATIO: f32 = Self::BOY_HEIGHT / Self::BOY_WIDTH;
+  const BOY_WIDTH: u32 = 589;
+  const BOY_HEIGHT: u32 = 656;
+  const ASPECT_RATIO: f32 = Self::BOY_HEIGHT as f32 / Self::BOY_WIDTH as f32;
 
-  const WIDTH: f32 = 100.;
-  const HEIGHT: f32 = Self::WIDTH * Self::ASPECT_RATIO;
+  const WIDTH: WorldUnit = WorldUnit::new(3.9);
+  const HEIGHT: WorldUnit = WorldUnit::new(3.9 * Self::ASPECT_RATIO);
 
   const Z_IDX: f32 = 1.;
 
-  fn bounding_rect() -> Rectangle {
-    Rectangle::new(Self::WIDTH, Self::HEIGHT)
+  fn bounding_rect(win_info: &WinInfo) -> Rectangle {
+    Rectangle::new(Self::WIDTH.to_x(win_info), Self::HEIGHT.to_y(win_info))
   }
 
-  fn spawn(mut commands: Commands, character: Character, pos: OldPosition, npc_assets: &NpcAssets) {
+  fn spawn(mut commands: Commands, character: Character, pos: WorldVec2, npc_assets: &NpcAssets) {
     let npc = Npc::new(character);
     commands.spawn(NpcBundle {
       sprite: Sprite::from_image(npc.current_asset(npc_assets)),
       npc,
-      transform: Transform::from_scale(Vec3::splat(Self::WIDTH / Self::BOY_WIDTH))
-        .with_translation(Self::Z_IDX * Vec3::Z),
-      pos,
+      pos: Position::new(pos, Self::WIDTH, Self::BOY_WIDTH, Self::Z_IDX),
     });
   }
 }
@@ -287,19 +284,18 @@ impl NpcPlugin {
     time: Res<Time>,
     mut state: ResMut<NpcPluginState>,
     npc_assets: Res<NpcAssets>,
-    win_info: Res<WinInfo>,
   ) {
     state.spawn_timer.tick(time.delta());
 
     if state.spawn_timer.just_finished() {
-      let height = -win_info.height * 0.39 + NpcBundle::HEIGHT / 2.;
       NpcBundle::spawn(
         commands,
         Character::random_character(),
-        OldPosition(Vec2::new(
-          -win_info.width / 2. - NpcBundle::WIDTH / 2.,
-          height,
-        )),
+        WorldVec2::normalized(-1., -0.78)
+          + WorldVec2 {
+            x: -NpcBundle::WIDTH / 2.,
+            y: NpcBundle::HEIGHT / 2.,
+          },
         &npc_assets,
       );
     }
@@ -308,14 +304,15 @@ impl NpcPlugin {
   fn control_npcs(
     mut commands: Commands,
     win_info: Res<WinInfo>,
-    mut npc_query: Query<(&mut Npc, &OldPosition, &mut MoveComponent)>,
+    mut npc_query: Query<(&mut Npc, &Position, &mut MoveComponent)>,
     rain_query: Query<(Entity, &Position), With<Rain>>,
   ) {
-    for (mut npc, &OldPosition(npc_pos), mut npc_vel) in &mut npc_query {
-      if npc_pos.x > -win_info.width / 2. + NpcBundle::WIDTH / 2. {
+    for (mut npc, npc_pos, mut npc_vel) in &mut npc_query {
+      let npc_pos = npc_pos.pos.to_absolute(&win_info);
+      if npc_pos.x > -win_info.width / 2. + NpcBundle::WIDTH.to_x(&win_info) / 2. {
         for (rain_entity, rain_pos) in &rain_query {
           let dist = rain_pos.pos.to_absolute(&win_info) - npc_pos;
-          let closest_point = NpcBundle::bounding_rect().closest_point(dist);
+          let closest_point = NpcBundle::bounding_rect(&win_info).closest_point(dist);
           if (closest_point - dist).length_squared() < RainBundle::RADIUS.to_x(&win_info).squared()
           {
             npc.state.absorb_rain();

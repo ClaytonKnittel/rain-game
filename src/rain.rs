@@ -26,7 +26,7 @@ use crate::{
 };
 
 #[derive(Component)]
-#[require(MoveComponent, GravityComponent, Transform)]
+#[require(MoveComponent, GravityComponent)]
 pub struct Rain;
 
 #[derive(Bundle)]

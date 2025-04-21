@@ -8,7 +8,6 @@ use bevy::{
     system::{Commands, Res},
   },
   sprite::Sprite,
-  transform::components::Transform,
 };
 
 use crate::{
@@ -18,7 +17,6 @@ use crate::{
 };
 
 #[derive(Component)]
-#[require(Transform)]
 struct Background;
 
 #[derive(Bundle)]

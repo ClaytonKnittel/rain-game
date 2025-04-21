@@ -123,6 +123,14 @@ impl WorldVec2 {
   }
 }
 
+impl Add for WorldVec2 {
+  type Output = Self;
+
+  fn add(self, rhs: Self) -> Self::Output {
+    Self { x: self.x + rhs.x, y: self.y + rhs.y }
+  }
+}
+
 impl AddAssign for WorldVec2 {
   fn add_assign(&mut self, rhs: Self) {
     self.x += rhs.x;
