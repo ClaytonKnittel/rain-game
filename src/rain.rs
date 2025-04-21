@@ -12,7 +12,7 @@ use bevy::{
     world::World,
   },
   image::Image,
-  math::{ops::atan2, Quat, Vec2},
+  math::{ops::atan2, Quat},
   sprite::Sprite,
   time::{Time, Timer, TimerMode},
   transform::components::Transform,
@@ -83,7 +83,7 @@ impl RainPlugin {
       RainBundle::spawn_rain(
         commands,
         resources.rain_image.clone_weak(),
-        WorldVec2::normalized(2. * fastrand::f32() - 1., 1.),
+        WorldVec2::new_normalized(2. * fastrand::f32() - 1., 1.),
       );
     }
   }
@@ -100,8 +100,8 @@ impl RainPlugin {
 
   fn rotate_raindrops(mut query: Query<(&MoveComponent, &mut Transform), With<Rain>>) {
     for (movement, mut transform) in &mut query {
-      let delta = movement.delta.try_normalize().unwrap_or(-Vec2::Y);
-      let angle = atan2(delta.x, -delta.y);
+      let delta = movement.delta.try_normalize().unwrap_or(-WorldVec2::Y);
+      let angle = atan2(delta.x.to_untyped(), -delta.y.to_untyped());
       *transform = transform.with_rotation(Quat::from_rotation_z(angle));
     }
   }

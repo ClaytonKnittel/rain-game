@@ -7,6 +7,7 @@ edition = "2021"
 bevy = { version = "0.15.3", default-features = false, features = ["bevy_asset", "bevy_sprite", "bevy_window", "bevy_winit", "bevy_render", "webgl2", "png", "jpeg", "x11"] }
 fastrand = "2.3.0"
 googletest = "0.14.0"
+ordered-float = "5.0.0"
 
 [profile.dev.package."*"]
 opt-level = 3

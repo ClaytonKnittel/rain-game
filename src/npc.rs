@@ -12,7 +12,7 @@ use bevy::{
     system::{Commands, Query, Res, ResMut, Resource},
   },
   image::Image,
-  math::{primitives::Rectangle, FloatPow, Vec2},
+  math::Vec2,
   sprite::Sprite,
   time::{Time, Timer, TimerMode},
 };
@@ -21,9 +21,8 @@ use crate::{
   movable::MoveComponent,
   position::Position,
   rain::{Rain, RainBundle},
-  win_info::WinInfo,
   world_init::WorldInitPlugin,
-  world_unit::{WorldUnit, WorldVec2},
+  world_unit::{WorldRect, WorldUnit, WorldVec2},
 };
 
 enum Character {
@@ -118,7 +117,7 @@ struct Npc {
 }
 
 impl Npc {
-  const WALK_SPEED: f32 = 60.;
+  const WALK_SPEED: WorldUnit = WorldUnit::new(2.5);
   const ANIMATION_PERIOD: Duration = Duration::from_millis(250);
 
   fn new(character: Character) -> Self {
@@ -185,8 +184,8 @@ impl NpcBundle {
 
   const Z_IDX: f32 = 1.;
 
-  fn bounding_rect(win_info: &WinInfo) -> Rectangle {
-    Rectangle::new(Self::WIDTH.to_x(win_info), Self::HEIGHT.to_y(win_info))
+  fn bounding_rect() -> WorldRect {
+    WorldRect::new(Self::WIDTH, Self::HEIGHT)
   }
 
   fn spawn(mut commands: Commands, character: Character, pos: WorldVec2, npc_assets: &NpcAssets) {
@@ -291,7 +290,7 @@ impl NpcPlugin {
       NpcBundle::spawn(
         commands,
         Character::random_character(),
-        WorldVec2::normalized(-1., -0.78)
+        WorldVec2::new_normalized(-1., -0.78)
           + WorldVec2 {
             x: -NpcBundle::WIDTH / 2.,
             y: NpcBundle::HEIGHT / 2.,
@@ -303,18 +302,17 @@ impl NpcPlugin {
 
   fn control_npcs(
     mut commands: Commands,
-    win_info: Res<WinInfo>,
     mut npc_query: Query<(&mut Npc, &Position, &mut MoveComponent)>,
     rain_query: Query<(Entity, &Position), With<Rain>>,
   ) {
     for (mut npc, npc_pos, mut npc_vel) in &mut npc_query {
-      let npc_pos = npc_pos.pos.to_absolute(&win_info);
-      if npc_pos.x > -win_info.width / 2. + NpcBundle::WIDTH.to_x(&win_info) / 2. {
+      let npc_pos = npc_pos.pos;
+
+      if npc_pos.x > WorldUnit::LEFT + NpcBundle::WIDTH / 2. {
         for (rain_entity, rain_pos) in &rain_query {
-          let dist = rain_pos.pos.to_absolute(&win_info) - npc_pos;
-          let closest_point = NpcBundle::bounding_rect(&win_info).closest_point(dist);
-          if (closest_point - dist).length_squared() < RainBundle::RADIUS.to_x(&win_info).squared()
-          {
+          let dist = rain_pos.pos - npc_pos;
+          let closest_point = NpcBundle::bounding_rect().closest_point(dist);
+          if (closest_point - dist).length_squared() < RainBundle::RADIUS.squared() {
             npc.state.absorb_rain();
             commands.entity(rain_entity).despawn();
           }
@@ -324,7 +322,7 @@ impl NpcPlugin {
       if !npc.state.is_wet() {
         npc_vel.delta = Npc::WALK_SPEED * Vec2::X;
       } else {
-        npc_vel.delta = Vec2::ZERO;
+        npc_vel.delta = WorldVec2::ZERO;
       }
     }
   }

@@ -4,7 +4,6 @@ use bevy::{
     component::Component,
     system::{Query, Res},
   },
-  math::Vec2,
   transform::components::Transform,
 };
 
@@ -32,9 +31,6 @@ impl Position {
   }
 }
 
-#[derive(Component, Default)]
-pub struct OldPosition(pub Vec2);
-
 pub struct PositionPlugin;
 
 impl PositionPlugin {
@@ -50,19 +46,10 @@ impl PositionPlugin {
       transform.scale.y = scale.to_y(&win_info) / image_width;
     }
   }
-
-  fn sync_old_render_positions(mut query: Query<(&OldPosition, &mut Transform)>) {
-    for (pos, mut transform) in &mut query {
-      transform.translation.x = pos.0.x;
-      transform.translation.y = pos.0.y;
-    }
-  }
 }
 
 impl Plugin for PositionPlugin {
   fn build(&self, app: &mut App) {
-    app
-      .add_systems(Update, PositionPlugin::sync_render_positions)
-      .add_systems(Update, PositionPlugin::sync_old_render_positions);
+    app.add_systems(Update, PositionPlugin::sync_render_positions);
   }
 }

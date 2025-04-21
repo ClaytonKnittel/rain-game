@@ -10,7 +10,10 @@ use bevy::{
   time::Time,
 };
 
-use crate::movable::{MoveComponent, MovePlugin};
+use crate::{
+  movable::{MoveComponent, MovePlugin},
+  world_unit::WorldUnit,
+};
 
 #[derive(Component, Default)]
 pub struct GravityComponent;
@@ -18,7 +21,7 @@ pub struct GravityComponent;
 pub struct GravityPlugin;
 
 impl GravityPlugin {
-  const G: f32 = 400.0;
+  const G: WorldUnit = WorldUnit::new(16.0);
 
   fn apply_gravity(time: Res<Time>, mut query: Query<&mut MoveComponent, With<GravityComponent>>) {
     let g = Self::G * time.delta_secs();
