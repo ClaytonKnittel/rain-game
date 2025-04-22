@@ -1,11 +1,16 @@
+#[cfg(not(target_arch = "wasm32"))]
 use bevy::{
-  app::{App, AppExit, Plugin, Startup, Update},
+  app::AppExit,
+  ecs::{event::EventWriter, system::Res},
+  input::{keyboard::KeyCode, ButtonInput},
+};
+use bevy::{
+  app::{App, Plugin, Startup, Update},
   core_pipeline::core_2d::Camera2d,
   ecs::{
-    event::{EventReader, EventWriter},
-    system::{Commands, Res, ResMut},
+    event::EventReader,
+    system::{Commands, ResMut},
   },
-  input::{keyboard::KeyCode, ButtonInput},
   window::WindowResized,
 };
 
