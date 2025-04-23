@@ -69,16 +69,16 @@ impl PlayerPlugin {
   ) {
     for mut move_component in &mut query {
       match (
-        keyboard_input.pressed(KeyCode::KeyW),
-        keyboard_input.pressed(KeyCode::KeyS),
+        keyboard_input.pressed(KeyCode::KeyW) || keyboard_input.pressed(KeyCode::ArrowUp),
+        keyboard_input.pressed(KeyCode::KeyS) || keyboard_input.pressed(KeyCode::ArrowDown),
       ) {
         (true, false) => move_component.delta.y = Self::SPEED,
         (false, true) => move_component.delta.y = -Self::SPEED,
         _ => move_component.delta.y = WorldUnit::ZERO,
       }
       match (
-        keyboard_input.pressed(KeyCode::KeyD),
-        keyboard_input.pressed(KeyCode::KeyA),
+        keyboard_input.pressed(KeyCode::KeyD) || keyboard_input.pressed(KeyCode::ArrowRight),
+        keyboard_input.pressed(KeyCode::KeyA) || keyboard_input.pressed(KeyCode::ArrowLeft),
       ) {
         (true, false) => move_component.delta.x = Self::SPEED,
         (false, true) => move_component.delta.x = -Self::SPEED,
