@@ -8,6 +8,7 @@ mod npc;
 mod player;
 mod position;
 mod rain;
+mod score;
 mod shack;
 mod win_info;
 mod world_init;
@@ -29,6 +30,7 @@ use npc::NpcPlugin;
 use player::PlayerPlugin;
 use position::PositionPlugin;
 use rain::RainPlugin;
+use score::ScorePlugin;
 use shack::ShackPlugin;
 use world_init::WorldInitPlugin;
 
@@ -41,7 +43,6 @@ fn main() {
             title: "Rain Game".into(),
             name: Some("rain_game.app".into()),
             present_mode: PresentMode::AutoVsync,
-            fit_canvas_to_parent: true,
             prevent_default_event_handling: false,
             ..default()
           }),
@@ -62,5 +63,6 @@ fn main() {
       BackgroundPlugin,
     ))
     .add_plugins((PositionPlugin, MovePlugin, GravityPlugin))
+    .add_plugins(ScorePlugin)
     .run();
 }

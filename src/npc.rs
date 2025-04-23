@@ -7,6 +7,7 @@ use bevy::{
     bundle::Bundle,
     component::Component,
     entity::Entity,
+    event::EventWriter,
     query::With,
     schedule::IntoSystemConfigs,
     system::{Commands, Query, Res, ResMut, Resource},
@@ -21,6 +22,7 @@ use crate::{
   movable::MoveComponent,
   position::Position,
   rain::{Rain, RainBundle},
+  score::EarnPoint,
   world_init::WorldInitPlugin,
   world_unit::{WorldRect, WorldUnit, WorldVec2},
 };
@@ -327,6 +329,21 @@ impl NpcPlugin {
     }
   }
 
+  fn score_npcs(
+    mut commands: Commands,
+    mut earn_point: EventWriter<EarnPoint>,
+    query: Query<(Entity, &Position), With<Npc>>,
+  ) {
+    for (entity, pos) in &query {
+      let pos = pos.pos;
+
+      if pos.x > WorldUnit::RIGHT - NpcBundle::WIDTH / 2. {
+        commands.entity(entity).despawn();
+        earn_point.send(EarnPoint);
+      }
+    }
+  }
+
   fn npc_tick(
     mut commands: Commands,
     time: Res<Time>,
@@ -350,7 +367,10 @@ impl Plugin for NpcPlugin {
         Startup,
         Self::initialize_plugin.after(WorldInitPlugin::world_init),
       )
-      .add_systems(FixedUpdate, (Self::control_npcs, Self::spawn_npcs))
+      .add_systems(
+        FixedUpdate,
+        (Self::control_npcs, Self::spawn_npcs, Self::score_npcs),
+      )
       .add_systems(Update, Self::npc_tick);
   }
 }
