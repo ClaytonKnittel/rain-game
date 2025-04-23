@@ -2,6 +2,7 @@
 name = "rain-game"
 version = "0.1.0"
 edition = "2021"
+exclude = ["dist", "assets"]
 
 [dependencies]
 bevy = { version = "0.15.3", default-features = false, features = ["bevy_asset", "bevy_sprite", "bevy_window", "bevy_winit", "bevy_render", "webgl2", "png", "jpeg", "x11"] }
