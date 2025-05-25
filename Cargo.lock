@@ -286,6 +286,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy-world-space"
+version = "0.1.0"
+source = "git+https://github.com/ClaytonKnittel/bevy-world-space.git?rev=98dbccdfcfd8509ebc95668cab70b39baa1eef5b#98dbccdfcfd8509ebc95668cab70b39baa1eef5b"
+dependencies = [
+ "bevy",
+ "ordered-float",
+]
+
+[[package]]
 name = "bevy_a11y"
 version = "0.15.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2875,6 +2884,7 @@ name = "rain-game"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "bevy-world-space",
  "fastrand",
  "googletest",
  "ordered-float",

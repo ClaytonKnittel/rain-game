@@ -10,7 +10,7 @@ use bevy::{
   sprite::Sprite,
 };
 
-use crate::{
+use bevy_world_space::{
   position::Position,
   world_init::WorldInitPlugin,
   world_unit::{WorldUnit, WorldVec2},

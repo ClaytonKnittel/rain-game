@@ -16,13 +16,12 @@ use bevy::{
   sprite::Sprite,
   time::{Time, Timer, TimerMode},
 };
-
-use crate::{
-  gravity::GravityComponent,
-  movable::MoveComponent,
+use bevy_world_space::{
   position::Position,
   world_unit::{WorldUnit, WorldVec2},
 };
+
+use crate::{gravity::GravityComponent, movable::MoveComponent};
 
 #[derive(Component)]
 #[require(MoveComponent, GravityComponent)]

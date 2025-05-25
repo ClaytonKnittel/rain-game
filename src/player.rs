@@ -13,12 +13,14 @@ use bevy::{
   input::{keyboard::KeyCode, ButtonInput},
   sprite::Sprite,
 };
+use bevy_world_space::{
+  position::Position,
+  world_unit::{WorldUnit, WorldVec2},
+};
 
 use crate::{
   movable::{MoveComponent, MovePlugin},
-  position::Position,
   rain::{Rain, RainBundle},
-  world_unit::{WorldUnit, WorldVec2},
 };
 
 /// Component that identifies the player.

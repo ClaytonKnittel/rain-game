@@ -9,11 +9,9 @@ use bevy::{
   math::Vec2,
   time::Time,
 };
+use bevy_world_space::world_unit::WorldUnit;
 
-use crate::{
-  movable::{MoveComponent, MovePlugin},
-  world_unit::WorldUnit,
-};
+use crate::movable::{MoveComponent, MovePlugin};
 
 #[derive(Component, Default)]
 pub struct GravityComponent;

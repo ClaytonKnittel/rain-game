@@ -7,7 +7,7 @@ use bevy::{
   time::Time,
 };
 
-use crate::{position::Position, world_unit::WorldVec2};
+use bevy_world_space::{position::Position, world_unit::WorldVec2};
 
 #[derive(Component, Default)]
 pub struct MoveComponent {

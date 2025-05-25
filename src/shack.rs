@@ -14,14 +14,13 @@ use bevy::{
   sprite::Sprite,
   time::{Time, Timer, TimerMode},
 };
-
-use crate::{
-  movable::MoveComponent,
+use bevy_world_space::{
   position::Position,
-  rain::Rain,
   world_init::WorldInitPlugin,
   world_unit::{WorldUnit, WorldVec2},
 };
+
+use crate::{movable::MoveComponent, rain::Rain};
 
 #[derive(Component)]
 struct Shack {

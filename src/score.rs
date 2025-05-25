@@ -14,7 +14,7 @@ use bevy::{
   utils::default,
 };
 
-use crate::world_init::WorldInitPlugin;
+use bevy_world_space::world_init::WorldInitPlugin;
 
 #[derive(Event)]
 pub struct EarnPoint;

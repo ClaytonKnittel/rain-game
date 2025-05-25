@@ -9,6 +9,7 @@ bevy = { version = "0.15.3", default-features = false, features = ["bevy_asset",
 fastrand = "2.3.0"
 googletest = "0.14.0"
 ordered-float = "5.0.0"
+bevy-world-space = { git = "https://github.com/ClaytonKnittel/bevy-world-space.git", rev = "98dbccdfcfd8509ebc95668cab70b39baa1eef5b" }
 
 [profile.dev.package."*"]
 opt-level = 3

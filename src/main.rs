@@ -6,13 +6,9 @@ mod gravity;
 mod movable;
 mod npc;
 mod player;
-mod position;
 mod rain;
 mod score;
 mod shack;
-mod win_info;
-mod world_init;
-mod world_unit;
 
 use background::BackgroundPlugin;
 use bevy::{
@@ -23,16 +19,15 @@ use bevy::{
   window::{PresentMode, Window, WindowPlugin},
   DefaultPlugins,
 };
+use bevy_world_space::WorldSpacePlugins;
 use framerate::FrameratePlugin;
 use gravity::GravityPlugin;
 use movable::MovePlugin;
 use npc::NpcPlugin;
 use player::PlayerPlugin;
-use position::PositionPlugin;
 use rain::RainPlugin;
 use score::ScorePlugin;
 use shack::ShackPlugin;
-use world_init::WorldInitPlugin;
 
 fn main() {
   App::new()
@@ -53,8 +48,8 @@ fn main() {
           ..default()
         }),
     )
+    .add_plugins(WorldSpacePlugins)
     .add_plugins(FrameratePlugin)
-    .add_plugins(WorldInitPlugin)
     .add_plugins((
       PlayerPlugin,
       RainPlugin,
@@ -62,7 +57,7 @@ fn main() {
       ShackPlugin,
       BackgroundPlugin,
     ))
-    .add_plugins((PositionPlugin, MovePlugin, GravityPlugin))
+    .add_plugins((MovePlugin, GravityPlugin))
     .add_plugins(ScorePlugin)
     .run();
 }

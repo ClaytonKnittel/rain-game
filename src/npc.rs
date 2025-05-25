@@ -17,14 +17,16 @@ use bevy::{
   sprite::Sprite,
   time::{Time, Timer, TimerMode},
 };
+use bevy_world_space::{
+  position::Position,
+  world_init::WorldInitPlugin,
+  world_unit::{WorldRect, WorldUnit, WorldVec2},
+};
 
 use crate::{
   movable::MoveComponent,
-  position::Position,
   rain::{Rain, RainBundle},
   score::EarnPoint,
-  world_init::WorldInitPlugin,
-  world_unit::{WorldRect, WorldUnit, WorldVec2},
 };
 
 enum Character {
