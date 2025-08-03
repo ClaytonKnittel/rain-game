@@ -15,6 +15,7 @@ use bevy::{
 };
 use bevy_world_space::{
   position::Position,
+  win_info::WinInfo,
   world_unit::{WorldUnit, WorldVec2},
 };
 
@@ -89,17 +90,17 @@ impl PlayerPlugin {
     }
   }
 
-  fn snap_in_bounds(mut query: Query<&mut Position, With<Player>>) {
+  fn snap_in_bounds(mut query: Query<&mut Position, With<Player>>, win_info: Res<WinInfo>) {
     for mut pos in &mut query {
       let pos = &mut pos.pos;
       pos.x = pos
         .x
-        .min(WorldUnit::RIGHT - PlayerBundle::WIDTH / 2.)
-        .max(WorldUnit::LEFT + PlayerBundle::WIDTH / 2.);
+        .min(WorldUnit::right(win_info.aspect_ratio()) - PlayerBundle::WIDTH / 2.)
+        .max(WorldUnit::left(win_info.aspect_ratio()) + PlayerBundle::WIDTH / 2.);
       pos.y = pos
         .y
-        .min(WorldUnit::TOP - PlayerBundle::WIDTH / 2.)
-        .max(WorldUnit::BOTTOM + PlayerBundle::WIDTH / 2.);
+        .min(WorldUnit::top(win_info.aspect_ratio()) - PlayerBundle::WIDTH / 2.)
+        .max(WorldUnit::bottom(win_info.aspect_ratio()) + PlayerBundle::WIDTH / 2.);
     }
   }
 

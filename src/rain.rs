@@ -18,6 +18,7 @@ use bevy::{
 };
 use bevy_world_space::{
   position::Position,
+  win_info::WinInfo,
   world_unit::{WorldUnit, WorldVec2},
 };
 
@@ -76,19 +77,28 @@ impl RainPlugin {
     });
   }
 
-  fn spawn_raindrops(commands: Commands, time: Res<Time>, mut resources: ResMut<RainResources>) {
+  fn spawn_raindrops(
+    commands: Commands,
+    time: Res<Time>,
+    mut resources: ResMut<RainResources>,
+    win_info: Res<WinInfo>,
+  ) {
     if resources.timer.tick(time.delta()).just_finished() {
       RainBundle::spawn_rain(
         commands,
         resources.rain_image.clone_weak(),
-        WorldVec2::new_normalized(2. * fastrand::f32() - 1., 1.),
+        WorldVec2::new_normalized(2. * fastrand::f32() - 1., 1., win_info.aspect_ratio()),
       );
     }
   }
 
-  fn despawn_raindrops(mut commands: Commands, query: Query<(Entity, &Position), With<Rain>>) {
-    let min_y = WorldUnit::BOTTOM - RainBundle::RADIUS;
-    let x_bound = WorldUnit::RIGHT + RainBundle::RADIUS;
+  fn despawn_raindrops(
+    mut commands: Commands,
+    query: Query<(Entity, &Position), With<Rain>>,
+    win_info: Res<WinInfo>,
+  ) {
+    let min_y = WorldUnit::bottom(win_info.aspect_ratio()) - RainBundle::RADIUS;
+    let x_bound = WorldUnit::right(win_info.aspect_ratio()) + RainBundle::RADIUS;
     for (entity, Position { pos, .. }) in &query {
       if pos.y < min_y || !(-x_bound..x_bound).contains(&pos.x) {
         commands.entity(entity).despawn();

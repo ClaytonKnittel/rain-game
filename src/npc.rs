@@ -19,6 +19,7 @@ use bevy::{
 };
 use bevy_world_space::{
   position::Position,
+  win_info::WinInfo,
   world_init::WorldInitPlugin,
   world_unit::{WorldRect, WorldUnit, WorldVec2},
 };
@@ -287,6 +288,7 @@ impl NpcPlugin {
     time: Res<Time>,
     mut state: ResMut<NpcPluginState>,
     npc_assets: Res<NpcAssets>,
+    win_info: Res<WinInfo>,
   ) {
     state.spawn_timer.tick(time.delta());
 
@@ -294,7 +296,7 @@ impl NpcPlugin {
       NpcBundle::spawn(
         commands,
         Character::random_character(),
-        WorldVec2::new_normalized(-1., -0.78)
+        WorldVec2::new_normalized(-1., -0.78, win_info.aspect_ratio())
           + WorldVec2 {
             x: -NpcBundle::WIDTH / 2.,
             y: NpcBundle::HEIGHT / 2.,
@@ -308,11 +310,12 @@ impl NpcPlugin {
     mut commands: Commands,
     mut npc_query: Query<(&mut Npc, &Position, &mut MoveComponent)>,
     rain_query: Query<(Entity, &Position), With<Rain>>,
+    win_info: Res<WinInfo>,
   ) {
     for (mut npc, npc_pos, mut npc_vel) in &mut npc_query {
       let npc_pos = npc_pos.pos;
 
-      if npc_pos.x > WorldUnit::LEFT + NpcBundle::WIDTH / 2. {
+      if npc_pos.x > WorldUnit::left(win_info.aspect_ratio()) + NpcBundle::WIDTH / 2. {
         for (rain_entity, rain_pos) in &rain_query {
           let dist = rain_pos.pos - npc_pos;
           let closest_point = NpcBundle::bounding_rect().closest_point(dist);
@@ -335,11 +338,12 @@ impl NpcPlugin {
     mut commands: Commands,
     mut earn_point: EventWriter<EarnPoint>,
     query: Query<(Entity, &Position), With<Npc>>,
+    win_info: Res<WinInfo>,
   ) {
     for (entity, pos) in &query {
       let pos = pos.pos;
 
-      if pos.x > WorldUnit::RIGHT - NpcBundle::WIDTH / 2. {
+      if pos.x > WorldUnit::right(win_info.aspect_ratio()) - NpcBundle::WIDTH / 2. {
         commands.entity(entity).despawn();
         earn_point.send(EarnPoint);
       }

@@ -16,6 +16,7 @@ use bevy::{
 };
 use bevy_world_space::{
   position::Position,
+  win_info::WinInfo,
   world_init::WorldInitPlugin,
   world_unit::{WorldUnit, WorldVec2},
 };
@@ -76,14 +77,14 @@ impl ShackPlugin {
     commands.insert_resource(ShackAssets { shack_sprites });
   }
 
-  fn spawn_shack(mut commands: Commands, shack_assets: Res<ShackAssets>) {
+  fn spawn_shack(mut commands: Commands, shack_assets: Res<ShackAssets>, win_info: Res<WinInfo>) {
     commands.spawn(ShackBundle {
       sprite: Sprite::from_image(shack_assets.shack_sprites[0].clone_weak()),
       pos: Position::new(
         WorldVec2::new(
-          WorldUnit::RIGHT - Self::WIDTH / 2.,
-          WorldUnit::BOTTOM + Self::HEIGHT / 2.,
-        ) + WorldVec2::new_normalized(0., 0.2),
+          WorldUnit::right(win_info.aspect_ratio()) - Self::WIDTH / 2.,
+          WorldUnit::bottom(win_info.aspect_ratio()) + Self::HEIGHT / 2.,
+        ) + WorldVec2::new_normalized(0., 0.2, win_info.aspect_ratio()),
         Self::WIDTH,
         Self::IMG_WIDTH,
         Self::Z_IDX,

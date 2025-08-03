@@ -12,6 +12,7 @@ use bevy::{
 
 use bevy_world_space::{
   position::Position,
+  win_info::WinInfo,
   world_init::WorldInitPlugin,
   world_unit::{WorldUnit, WorldVec2},
 };
@@ -34,14 +35,14 @@ impl BackgroundPlugin {
 
   const Z_IDX: f32 = -10.;
 
-  fn spawn(mut commands: Commands, asset_server: Res<AssetServer>) {
+  fn spawn(mut commands: Commands, asset_server: Res<AssetServer>, win_info: Res<WinInfo>) {
     let sprite = Sprite::from_image(asset_server.load("background/background.jpg"));
 
     commands.spawn(BackgroundBundle {
       sprite,
       pos: Position::new(
         WorldVec2::ZERO,
-        WorldUnit::SCREEN_WIDTH,
+        WorldUnit::screen_width(win_info.aspect_ratio()),
         Self::IMG_WIDTH,
         Self::Z_IDX,
       ),
